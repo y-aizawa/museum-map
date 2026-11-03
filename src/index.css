@@ -168,15 +168,8 @@ button, input { font: inherit; }
 .list-card h3 { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .list-card-title { padding: 0; border: 0; background: none; color: inherit; text-align: left; font: inherit; cursor: pointer; }
 .list-card-title:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.list-card-arrow { flex: 0 0 auto; color: var(--muted); font-size: 22px; font-weight: 400; }
 .list-exhibition-more { margin-top: 8px; color: var(--brand); font-size: 12px; }
-.list-hours-details { margin-top: 6px; font-size: 12px; }
-.list-hours-details summary { color: var(--brand); cursor: pointer; }
-.list-hours-details dl > div { display: grid; grid-template-columns: 80px minmax(0,1fr); gap: 8px; margin-top: 8px; }
-.list-hours-details dt { color: var(--muted); }
-.list-hours-details dd { margin: 0; white-space: pre-line; }
-.card-exhibition a { display: inline-block; margin-top: 6px; color: var(--brand); font-size: 12px; }
-.list-facility-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.list-facility-links a { padding: 8px; border: 1px solid var(--line); border-radius: 7px; color: var(--brand); font-size: 12px; text-decoration: none; }
 .list-card:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
 .list-card-meta { margin-top: 9px; display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 8px; white-space: nowrap; overflow: hidden; }
 .list-card-meta > span:last-child { overflow: hidden; text-overflow: ellipsis; }
@@ -266,6 +259,9 @@ button, input { font: inherit; }
   .map-popup { width: min(280px,calc(100vw - 60px)); max-height: 58vh; overflow-y: auto; }
   .list-header { flex-shrink: 0; }
   .list-scroll { min-height: 0; overscroll-behavior: contain; }
+  .list-header > .sheet-back { width: auto; padding: 0 4px; transform: none; font-size: 13px; color: var(--brand); }
+  .sheet-detail { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; background: white; }
+  .sheet-detail .map-popup { width: 100%; max-height: none; padding: 18px; overflow: visible; }
   .desktop-list-open .map-area { left: 0; }
 }
 
