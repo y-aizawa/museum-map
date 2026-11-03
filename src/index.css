@@ -246,7 +246,8 @@ button, input { font: inherit; }
   .facility-panel.sheet-level-2 { height: calc(100dvh - 120px - env(safe-area-inset-bottom)); }
   .list-header { min-height: 68px; position: relative; padding-top: 20px; touch-action: none; }
   .sheet-grip { width: 40px; height: 4px; position: absolute; top: 7px; left: 50%; transform: translateX(-50%); border-radius: 99px; background: #b9c5c1; }
-  .list-header > button { border: 0; transform: rotate(-90deg); }
+  .list-header > button { border: 0; }
+  .list-collapse .icon { transform: rotate(90deg); }
   .mobile-list-peek { min-height: 52px; position: fixed; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); padding: 13px 15px 9px; display: flex; align-items: center; justify-content: space-between; border-radius: 18px; background: white; box-shadow: 0 -4px 20px rgba(23,48,42,.16); z-index: 42; }
   .mobile-list-peek > span { width: 38px; height: 4px; position: absolute; top: 7px; left: 50%; transform: translateX(-50%); border-radius: 99px; background: #b9c5c1; }
   .mobile-list-peek div { font-size: 11px; font-weight: 700; }

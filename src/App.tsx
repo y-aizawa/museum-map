@@ -883,7 +883,7 @@ function FacilityList({ items, selectedId, selectedFacility, outsideFilters, onB
         {mobile && <span className="sheet-grip" />}
         {showDetail ? <><Button className="sheet-back" onClick={onBack}>‹ 一覧に戻る</Button><Button onClick={onDetailClose} aria-label="施設情報を閉じる"><Icon name="close" /></Button></> : <><div><small>地図の表示範囲</small><h2>この範囲の施設 <b>{items.length}</b></h2></div>
         {!mobile && <Button onClick={onClose} aria-label="一覧を閉じる"><Icon name="close" /></Button>}
-        {mobile && <Button onClick={() => onSheetLevel(sheetLevel === 0 ? 1 : 0)} aria-label="一覧を開閉"><Icon name="chevron" /></Button>}</>}
+        {mobile && <Button className="list-collapse" onClick={() => onSheetLevel(0)} aria-label="一覧を折りたたむ"><Icon name="chevron" /></Button>}</>}
       </header>
       {stale && !showDetail && <Button className="refresh-area" onClick={onRefresh}><Icon name="refresh" size={16} />この範囲で一覧を更新</Button>}
       <div className="list-scroll" ref={listScroll} style={showDetail ? { display: 'none' } : undefined} onScroll={event => { if (!showDetail) savedScroll.current = event.currentTarget.scrollTop }}>
