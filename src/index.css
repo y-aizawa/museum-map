@@ -174,8 +174,8 @@ button, input { font: inherit; }
 .category-symbol { width: 22px; height: 22px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: white; background: var(--pin, var(--gray)); font-size: 9px; font-weight: 700; }
 .list-schedule { margin-top: 7px; }
 .list-schedule > div { padding: 2px 0; display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 5px; }
-.list-schedule span { color: var(--muted); font-size: 8px; font-weight: 600; }
-.list-schedule p { margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 8px; }
+.list-schedule span { align-self: center; color: var(--muted); font-size: 10px; font-weight: 500; }
+.list-schedule p { margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; font-weight: 600; }
 .list-condition-tags { margin-top: 6px; display: flex; gap: 5px; flex-wrap: wrap; }
 .list-condition-tags span { padding: 3px 6px; border-radius: 4px; color: #6c552b; background: #f6eedf; font-size: 7px; font-weight: 600; }
 .list-notice { width: fit-content; margin-top: 7px; padding: 4px 7px; border-radius: 5px; color: #785022; background: #f8ecdd; font-size: 8px; font-weight: 600; }
