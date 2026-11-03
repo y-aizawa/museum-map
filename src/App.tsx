@@ -38,6 +38,7 @@ type Facility = {
   categories: string[]
   topics: string[]
   primary_category: CategoryGroup
+  subcategories?: CategoryGroup[]
   operational_status: OperationalStatus
   schedule_summary: string
   schedule_applicability: string
@@ -178,7 +179,10 @@ function isInBounds(facility: Facility, bounds: BoundsValue | null) {
 }
 
 function displayCategories(facility: Facility) {
-  return [categoryLabels[getCategoryGroup(facility)]]
+  const primary = getCategoryGroup(facility)
+  return [...new Set([primary, ...(facility.subcategories || [])])]
+    .filter(category => categoryGroups.includes(category))
+    .map(category => categoryLabels[category])
 }
 
 type ScheduleDisplay = { today: string; regular: string; closed: string; details: string }
@@ -330,7 +334,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   }
   const top = document.createElement('div')
   top.className = 'popup-topline'
-  top.textContent = displayCategories(facility).join('・')
+  top.textContent = displayCategories(facility).join('｜')
   const title = document.createElement('strong')
   title.className = 'popup-title'
   title.textContent = facility.name
@@ -806,7 +810,7 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
     || (left.start_date || '').localeCompare(right.start_date || ''))
   const schedule = scheduleDisplay(facility)
   const notice = publicNotice(facility)
-  const categories = displayCategories(facility).join('・')
+  const categories = displayCategories(facility).join('｜')
   return (
     <article data-facility-id={facility.id} className={`list-card ${selected ? 'selected' : ''}`} onClick={event => {
       if (!(event.target as HTMLElement).closest('a, button, details')) onSelect()
