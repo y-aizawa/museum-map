@@ -234,14 +234,14 @@ button, input { font: inherit; }
   .maplibregl-ctrl-bottom-right { bottom: 58px; }
   .maplibregl-ctrl-bottom-left { bottom: 54px; }
   .map-legend { left: 9px; bottom: 90px; }
-  .facility-panel { width: 100%; top: auto; right: 0; border: 0; border-radius: 17px 17px 0 0; box-shadow: 0 -8px 30px rgba(23,48,42,.16); transition: height .28s ease; }
+  .facility-panel { width: auto; top: auto; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); border: 0; border-radius: 18px; overflow: hidden; box-shadow: 0 -8px 30px rgba(23,48,42,.16); transition: height .28s ease; }
   .facility-panel.sheet-level-0 { display: none; }
   .facility-panel.sheet-level-1 { height: 50dvh; }
-  .facility-panel.sheet-level-2 { height: calc(100dvh - 100px); }
+  .facility-panel.sheet-level-2 { height: calc(100dvh - 120px - env(safe-area-inset-bottom)); }
   .list-header { min-height: 68px; position: relative; padding-top: 20px; touch-action: none; }
   .sheet-grip { width: 40px; height: 4px; position: absolute; top: 7px; left: 50%; transform: translateX(-50%); border-radius: 99px; background: #b9c5c1; }
   .list-header > button { border: 0; transform: rotate(-90deg); }
-  .mobile-list-peek { min-height: 52px; position: fixed; left: 9px; right: 9px; bottom: 8px; padding: 13px 15px 9px; display: flex; align-items: center; justify-content: space-between; border-radius: 14px; background: white; box-shadow: 0 -4px 20px rgba(23,48,42,.16); z-index: 42; }
+  .mobile-list-peek { min-height: 52px; position: fixed; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); padding: 13px 15px 9px; display: flex; align-items: center; justify-content: space-between; border-radius: 18px; background: white; box-shadow: 0 -4px 20px rgba(23,48,42,.16); z-index: 42; }
   .mobile-list-peek > span { width: 38px; height: 4px; position: absolute; top: 7px; left: 50%; transform: translateX(-50%); border-radius: 99px; background: #b9c5c1; }
   .mobile-list-peek div { font-size: 11px; font-weight: 700; }
   .mobile-list-peek b { color: var(--brand); }
