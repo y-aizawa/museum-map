@@ -663,30 +663,29 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, onSelect, onBoun
     popupRef.current = null
     previousPopup?.remove()
     const popupContent = buildPopup(facility, temporaryId === facility.id)
-    const popup = new Popup({ anchor: 'bottom', closeButton: true, closeOnClick: true, offset: 28, maxWidth: '410px', focusAfterOpen: false })
+    const popup = new Popup({ closeButton: true, closeOnClick: true, offset: 28, maxWidth: '410px', focusAfterOpen: false })
       .setLngLat([facility.longitude, facility.latitude])
       .setDOMContent(popupContent)
       .addTo(map)
     popupRef.current = popup
-    // Keep the whole bubble below the toolbar and above the bottom controls.
-    // Centering the pin alone can leave a tall popup outside the viewport.
+    // Let MapLibre choose the bubble direction without moving the map.
+    // Limit its height to the larger available space above/below the pin.
     const fitPopup = () => {
       if (popupRef.current !== popup) return
-      const bounds = map.getContainer().getBoundingClientRect()
-      const top = bounds.top + (window.innerWidth <= 760 ? 125 : 105)
-      const bottom = bounds.bottom - (window.innerWidth <= 760 ? 85 : 45)
-      popupContent.style.maxHeight = `${Math.max(80, Math.min(520, bottom - top - 20))}px`
-      const bubble = popup.getElement().getBoundingClientRect()
-      const left = bounds.left + 16
-      const right = bounds.right - 60
-      const dx = bubble.left < left ? bubble.left - left : bubble.right > right ? bubble.right - right : 0
-      const dy = bubble.top < top ? bubble.top - top : bubble.bottom > bottom ? bubble.bottom - bottom : 0
-      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) map.panBy([dx, dy], { duration: 0 })
+      const height = map.getContainer().clientHeight
+      const compact = window.innerWidth <= 760
+      const top = compact ? 125 : 105
+      const bottom = compact ? 85 : 45
+      const point = map.project([facility.longitude, facility.latitude])
+      const available = Math.max(point.y - top, height - bottom - point.y) - 40
+      popupContent.style.maxHeight = `${Math.max(80, Math.min(520, available))}px`
+      popup.setPadding({ top, bottom, left: 16, right: 60 })
     }
-    map.stop()
     const frame = requestAnimationFrame(fitPopup)
     const observer = new ResizeObserver(fitPopup)
     observer.observe(popupContent)
+    map.on('move', fitPopup)
+    map.on('resize', fitPopup)
     popup.on('close', () => {
       if (popupRef.current !== popup) return
       popupRef.current = null
@@ -695,6 +694,8 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, onSelect, onBoun
     return () => {
       cancelAnimationFrame(frame)
       observer.disconnect()
+      map.off('move', fitPopup)
+      map.off('resize', fitPopup)
     }
   }, [selectedId, temporaryId, items, onSelect])
 
