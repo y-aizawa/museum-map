@@ -196,6 +196,13 @@ function displayCategories(facility: Facility) {
 
 type ScheduleDisplay = { today: string; regular: string; closed: string; details: string }
 
+function closureDisplay(value: string) {
+  const cleaned = value.split(/入場料|観覧料|入館料|料金|最寄り駅|アクセス|交通案内|お問い合わせ|お問合せ|Instagram|facebook|twitter|Copyright|PAGE TOP|###|主催|共催|会場|会期|開館時間|営業時間|施設紹介|見る・参加する/i)[0]
+    .replace(/^(?:休館日等|休館日|休園日|定休日)\s*[:：]?\s*/, '').trim()
+  if (!cleaned || cleaned.length > 160 || /\.\.\.|…|https?:|wordlim|/.test(cleaned)) return '休館日は公式カレンダーをご確認ください'
+  return cleaned
+}
+
 function scheduleDisplay(facility: Facility): ScheduleDisplay {
   const unavailable = facility.operational_status === 'closed' || facility.operational_status === 'suspended'
   if (unavailable) return { today: '—', regular: '—', closed: '—', details: '' }
@@ -208,7 +215,7 @@ function scheduleDisplay(facility: Facility): ScheduleDisplay {
     const days: Record<string, string> = { mo: '月', tu: '火', we: '水', th: '木', fr: '金', sa: '土', su: '日' }
     const lines = structured.weekly.map(rule => `${rule.days.map(day => days[day] || day).join('・')} ${weeklyRuleTime(rule)}`)
     const todayRules = structured.weekly.filter(rule => rule.days.includes(weekdayCodeInTokyo()))
-    const today = todayRules.length ? todayRules.map(weeklyRuleTime).join('／') : '通常休館日'
+    const today = todayRules.length ? todayRules.map(rule => `${rule.open}–${rule.close}`).join('／') : '通常休館日'
     const closed = facility.schedule_summary.split(/[。]/).filter(clause => /休館|休園|定休/.test(clause)).join('。')
     return { today, regular: lines.length <= 2 ? lines.join('／') : lines[0] + ' ほか', closed: closed || '—', details: [...lines, structured.holiday_rule || ''].filter(Boolean).join('\n') }
   }
@@ -375,10 +382,11 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
         addRow(rule.days.map(day => dayNames[day] || day).join('・'), `${rule.open}–${rule.close}`)
         if (rule.last_admission) addRow('最終入館', rule.last_admission)
       })
-      addRow('休館日等', structured.holiday_rule || schedule.closed)
+      const closure = structured.holiday_rule || schedule.closed
+      if (closure && closure !== '—') addRow('休館日', closureDisplay(closure))
     } else {
       addRow('通常時間', schedule.regular)
-      addRow('休館日', schedule.closed)
+      if (schedule.closed !== '—') addRow('休館日', closureDisplay(schedule.closed))
       if (schedule.details !== schedule.regular) addRow('補足', schedule.details)
     }
     details.append(summary, content)
