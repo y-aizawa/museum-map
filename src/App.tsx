@@ -809,6 +809,7 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
   exhibitionFilter: ExhibitionFilter
   onSelect: () => void
 }) {
+  const [showAllExhibitions, setShowAllExhibitions] = useState(false)
   const exhibitions = (facility.special_exhibitions || [])
     .filter(item => !item.end_date || item.end_date >= todayInTokyo())
     .sort((left, right) =>
@@ -817,30 +818,43 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
   const schedule = scheduleDisplay(facility)
   const notice = publicNotice(facility)
   const categories = displayCategories(facility).join('・')
+  const weekly = facility.schedule?.weekly || []
+  const dayNames: Record<string, string> = { mo: '月', tu: '火', we: '水', th: '木', fr: '金', sa: '土', su: '日' }
+  const closure = facility.schedule?.holiday_rule || schedule.closed
+  const tags = conditionTags(facility)
   return (
-    <article className={`list-card ${selected ? 'selected' : ''}`} role="button" tabIndex={0} onClick={onSelect} onKeyDown={event => {
-      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect() }
+    <article data-facility-id={facility.id} className={`list-card ${selected ? 'selected' : ''}`} onClick={event => {
+      if (!(event.target as HTMLElement).closest('a, button, details')) onSelect()
     }}>
       {facility.image_url && <img src={facility.image_url} alt="" />}
-      <h3><span>{facility.name}</span><span className="list-card-arrow" aria-hidden="true">›</span></h3>
+      <h3><button className="list-card-title" onClick={onSelect} aria-pressed={selected}>{facility.name}</button></h3>
       <div className="list-card-meta"><span className={`category-symbol category-${getCategoryGroup(facility)}`}>{categorySymbols[getCategoryGroup(facility)]}</span><span>{categories}{facility.address ? ` · ${facility.address}` : ''}</span></div>
       <div className="list-schedule">
-        {schedule.today !== '—' && <div><span>本日</span><p>{schedule.today}</p></div>}
+        <div><span>本日</span><p>{facility.operational_status === 'closed' ? '閉館しました' : facility.operational_status === 'suspended' ? '休館中' : schedule.today !== '—' ? schedule.today : '公式サイトでご確認ください'}</p></div>
       </div>
+      {(weekly.length > 0 || schedule.details || schedule.regular !== '—') && <details className="list-hours-details">
+        <summary>曜日別の時間・休館日</summary>
+        <dl>
+          {weekly.length ? weekly.map((rule, index) => <div key={index}><dt>{rule.days.map(day => dayNames[day] || day).join('・')}</dt><dd>{weeklyRuleTime(rule)}</dd></div>) : schedule.regular !== '—' && <div><dt>通常時間</dt><dd>{schedule.regular}</dd></div>}
+          {closure && closure !== '—' && <div><dt>休館日</dt><dd>{closureDisplay(closure)}</dd></div>}
+          {!weekly.length && schedule.details && schedule.details !== schedule.regular && <div><dt>補足</dt><dd>{schedule.details}</dd></div>}
+        </dl>
+      </details>}
+      {tags.length > 0 && <div className="list-condition-tags">{tags.map(tag => <span key={tag}>{tag}</span>)}</div>}
       {notice && <div className={`list-notice ${facility.operational_status}`}>{notice}</div>}
-      {exhibitions.slice(0, 2).map(item => <div className={`card-exhibition ${exhibitionPhase(item) === '開催予定' ? 'exhibition-upcoming' : 'exhibition-ongoing'} ${exhibitionFilter !== 'any' ? 'featured' : ''}`} key={item.title}><em>{exhibitionPhase(item) || '特別展'}{item.is_sample && <small>サンプル</small>}</em><b>{item.title}</b><span>会期：{formatExhibitionPeriod(item)}</span></div>)}
-      {exhibitions.length > 2 && <div className="list-exhibition-more">ほか{exhibitions.length - 2}件の特別展</div>}
+      {(showAllExhibitions ? exhibitions : exhibitions.slice(0, 2)).map(item => <div className={`card-exhibition ${exhibitionPhase(item) === '開催予定' ? 'exhibition-upcoming' : 'exhibition-ongoing'} ${exhibitionFilter !== 'any' ? 'featured' : ''}`} key={item.title}><em>{exhibitionPhase(item) || '特別展'}{item.is_sample && <small>サンプル</small>}</em><b>{item.title}</b><span>会期：{formatExhibitionPeriod(item)}</span>{item.official_url && <a href={item.official_url} target="_blank" rel="noreferrer">展覧会公式サイト</a>}</div>)}
+      {exhibitions.length > 2 && <Button className="list-exhibition-more" onClick={() => setShowAllExhibitions(value => !value)}>{showAllExhibitions ? '表示を少なくする' : `ほか${exhibitions.length - 2}件の特別展を表示`}</Button>}
+      <div className="list-facility-links">
+        {facility.official_url && <a href={facility.official_url} target="_blank" rel="noreferrer">公式サイト</a>}
+        <a href={googleMapsUrl(facility)} target="_blank" rel="noreferrer">Googleマップで開く</a>
+      </div>
     </article>
   )
 }
 
-function FacilityList({ items, selectedId, selectedFacility, outsideFilters, onBack, onDetailClose, stale, mobile, sheetLevel, exhibitionFilter, onSheetLevel, onRefresh, onReset, onClose, onSelect }: {
+function FacilityList({ items, selectedId, stale, mobile, sheetLevel, exhibitionFilter, onSheetLevel, onRefresh, onReset, onClose, onSelect }: {
   items: Facility[]
   selectedId: string | null
-  selectedFacility?: Facility
-  outsideFilters?: boolean
-  onBack?: () => void
-  onDetailClose?: () => void
   stale: boolean
   mobile: boolean
   sheetLevel: SheetLevel
@@ -851,17 +865,16 @@ function FacilityList({ items, selectedId, selectedFacility, outsideFilters, onB
   onClose: () => void
   onSelect: (facility: Facility) => void
 }) {
-  const detailHost = useRef<HTMLDivElement>(null)
   const listScroll = useRef<HTMLDivElement>(null)
-  const savedScroll = useRef(0)
-  const showDetail = mobile && Boolean(selectedFacility)
   useEffect(() => {
-    if (!detailHost.current) return
-    detailHost.current.replaceChildren(...(selectedFacility ? [buildPopup(selectedFacility, Boolean(outsideFilters))] : []))
-  }, [selectedFacility, outsideFilters])
-  useEffect(() => {
-    if (!showDetail && listScroll.current) listScroll.current.scrollTop = savedScroll.current
-  }, [showDetail])
+    if (!mobile || sheetLevel === 0 || !selectedId || !listScroll.current) return
+    const container = listScroll.current
+    const frame = requestAnimationFrame(() => {
+      const card = Array.from(container.querySelectorAll<HTMLElement>('[data-facility-id]')).find(item => item.dataset.facilityId === selectedId)
+      if (card) container.scrollTop += card.getBoundingClientRect().top - container.getBoundingClientRect().top
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [selectedId, mobile, sheetLevel, items])
   const dragStart = useRef<number | null>(null)
   const onPointerUp = (event: React.PointerEvent) => {
     if (dragStart.current === null) return
@@ -878,17 +891,16 @@ function FacilityList({ items, selectedId, selectedFacility, outsideFilters, onB
         event.currentTarget.setPointerCapture(event.pointerId)
       }} onPointerUp={onPointerUp} onPointerCancel={() => { dragStart.current = null }}>
         {mobile && <span className="sheet-grip" />}
-        {showDetail ? <><Button className="sheet-back" onClick={onBack}>‹ 一覧に戻る</Button><Button onClick={onDetailClose} aria-label="施設情報を閉じる"><Icon name="close" /></Button></> : <><div><small>地図の表示範囲</small><h2>この範囲の施設 <b>{items.length}</b></h2></div>
+        <div><small>地図の表示範囲</small><h2>この範囲の施設 <b>{items.length}</b></h2></div>
         {!mobile && <Button onClick={onClose} aria-label="一覧を閉じる"><Icon name="close" /></Button>}
-        {mobile && <Button onClick={() => onSheetLevel(sheetLevel === 0 ? 1 : 0)} aria-label="一覧を開閉"><Icon name="chevron" /></Button>}</>}
+        {mobile && <Button onClick={() => onSheetLevel(sheetLevel === 0 ? 1 : 0)} aria-label="一覧を開閉"><Icon name="chevron" /></Button>}
       </header>
-      {stale && !showDetail && <Button className="refresh-area" onClick={onRefresh}><Icon name="refresh" size={16} />この範囲で一覧を更新</Button>}
-      <div className="list-scroll" ref={listScroll} style={showDetail ? { display: 'none' } : undefined}>
-        {items.length ? items.map(facility => <FacilityCard key={facility.id} facility={facility} selected={selectedId === facility.id} exhibitionFilter={exhibitionFilter} onSelect={() => { savedScroll.current = listScroll.current?.scrollTop || 0; onSelect(facility) }} />) : (
+      {stale && <Button className="refresh-area" onClick={onRefresh}><Icon name="refresh" size={16} />この範囲で一覧を更新</Button>}
+      <div className="list-scroll" ref={listScroll}>
+        {items.length ? items.map(facility => <FacilityCard key={facility.id} facility={facility} selected={selectedId === facility.id} exhibitionFilter={exhibitionFilter} onSelect={() => onSelect(facility)} />) : (
           <div className="list-empty"><Icon name="info" size={25} /><strong>この範囲には条件に一致する施設がありません</strong><Button onClick={onReset}>初期条件に戻す</Button></div>
         )}
       </div>
-      <div className="sheet-detail" ref={detailHost} hidden={!showDetail} />
     </aside>
   )
 }
@@ -900,7 +912,6 @@ function App() {
   const [filterOpen, setFilterOpen] = useState(false)
   const [listOpen, setListOpen] = useState(false)
   const [sheetLevel, setSheetLevel] = useState<SheetLevel>(0)
-  const previousListLevel = useRef<SheetLevel>(1)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [temporaryId, setTemporaryId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -917,7 +928,11 @@ function App() {
     const temporary = facilities.find(item => item.id === temporaryId)
     return temporary ? [...filtered, temporary] : filtered
   }, [filtered, temporaryId])
-  const listItems = useMemo(() => filtered.filter(item => isInBounds(item, listBounds)), [filtered, listBounds])
+  const listItems = useMemo(() => {
+    const items = filtered.filter(item => isInBounds(item, listBounds))
+    const selected = mobile && selectedId ? facilities.find(item => item.id === selectedId) : undefined
+    return selected && !items.some(item => item.id === selected.id) ? [selected, ...items] : items
+  }, [filtered, listBounds, mobile, selectedId])
   const currentRangeCount = useMemo(() => filtered.filter(item => isInBounds(item, liveBounds)).length, [filtered, liveBounds])
   const suggestions = useMemo(() => {
     const text = query.trim().toLowerCase()
@@ -936,7 +951,7 @@ function App() {
   const handleSelect = useCallback((facility: Facility | null) => {
     setSelectedId(facility?.id || null)
     if (mobile) {
-      if (facility) previousListLevel.current = 1
+      if (facility) setListBounds(liveBoundsRef.current)
       setSheetLevel(facility ? 1 : 0)
     }
   }, [mobile])
@@ -959,14 +974,13 @@ function App() {
   const selectFromList = (facility: Facility) => {
     setTemporaryId(null)
     setSelectedId(facility.id)
-    if (mobile) previousListLevel.current = sheetLevel || 1
   }
   const selectSearch = (facility: Facility) => {
     setQuery(facility.name)
     setSuggestionsOpen(false)
     setTemporaryId(matchesFilters(facility, filters) ? null : facility.id)
     setSelectedId(facility.id)
-    if (mobile) setSheetLevel(1)
+    if (mobile) { setListBounds(liveBoundsRef.current); setSheetLevel(1) }
   }
   const openFilters = () => {
     setDraft(cloneFilters(filters))
@@ -1032,7 +1046,7 @@ function App() {
         ))}</div>}
       </div>}
 
-      {effectiveListOpen && !filterOpen && <FacilityList items={listItems} selectedId={selectedId} selectedFacility={mobile ? facilities.find(item => item.id === selectedId) : undefined} outsideFilters={temporaryId === selectedId} onBack={() => { setSelectedId(null); setSheetLevel(previousListLevel.current); if (!listBounds) setListBounds(liveBoundsRef.current) }} onDetailClose={() => { setSelectedId(null); setSheetLevel(0) }} stale={boundsStale} mobile={mobile} sheetLevel={sheetLevel} exhibitionFilter={filters.exhibition} onSheetLevel={level => { setSheetLevel(level); if (level === 0) setSelectedId(null); if (!listBounds) setListBounds(liveBoundsRef.current) }} onRefresh={() => setListBounds(liveBoundsRef.current)} onReset={initialReset} onClose={() => setListOpen(false)} onSelect={selectFromList} />}
+      {effectiveListOpen && !filterOpen && <FacilityList items={listItems} selectedId={selectedId} stale={boundsStale} mobile={mobile} sheetLevel={sheetLevel} exhibitionFilter={filters.exhibition} onSheetLevel={level => { setSheetLevel(level); if (level === 0) setSelectedId(null); if (!listBounds) setListBounds(liveBoundsRef.current) }} onRefresh={() => setListBounds(liveBoundsRef.current)} onReset={initialReset} onClose={() => setListOpen(false)} onSelect={selectFromList} />}
       {mobile && !selectedId && !filterOpen && sheetLevel === 0 && <Button className="mobile-list-peek" onClick={openList}><span /><div>この範囲の施設 <b>{currentRangeCount}</b></div><Icon name="chevron" size={16} /></Button>}
 
       {filterOpen && <FilterPanel draft={draft} onChange={setDraft} onClose={() => setFilterOpen(false)} onApply={applyFilters} />}
