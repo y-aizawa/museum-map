@@ -479,11 +479,12 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   return root
 }
 
-function MapCanvas({ items, selectedId, temporaryId, layoutKey, onSelect, onBounds, onErrorChange }: {
+function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect, onBounds, onErrorChange }: {
   items: Facility[]
   selectedId: string | null
   temporaryId: string | null
   layoutKey: string
+  mobile: boolean
   onSelect: (facility: Facility | null) => void
   onBounds: (bounds: BoundsValue) => void
   onErrorChange: (error: boolean) => void
@@ -663,31 +664,25 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, onSelect, onBoun
     const previousPopup = popupRef.current
     popupRef.current = null
     previousPopup?.remove()
+    if (mobile) return
     const popupContent = buildPopup(facility, temporaryId === facility.id)
     const popup = new Popup({ closeButton: true, closeOnClick: true, offset: 28, maxWidth: '410px', focusAfterOpen: false })
       .setLngLat([facility.longitude, facility.latitude])
       .setDOMContent(popupContent)
       .addTo(map)
     popupRef.current = popup
-    // Desktop uses the space beside the pin; mobile uses a stationary bottom card.
+    // Mobile details live in FacilityList; this popup is desktop-only.
     const fitPopup = () => {
       if (popupRef.current !== popup) return
       const height = map.getContainer().clientHeight
-      const compact = window.innerWidth <= 760
-      const top = compact ? 125 : 105
-      const bottom = compact ? 85 : 45
-      popup.getElement().classList.toggle('mobile-facility-popup', compact)
-      if (compact) {
-        const visibleHeight = Math.min(height, window.visualViewport?.height ?? window.innerHeight)
-        popupContent.style.maxHeight = `${Math.max(80, Math.min(420, visibleHeight * .48, visibleHeight - top - 24))}px`
-        return
-      }
+      const top = 105
+      const bottom = 45
       const point = map.project([facility.longitude, facility.latitude])
       const width = map.getContainer().clientWidth
       const bubbleWidth = popup.getElement().offsetWidth
       const rightSpace = width - 60 - point.x
       const leftSpace = point.x - 16
-      const sideways = !compact && Math.max(rightSpace, leftSpace) >= bubbleWidth + 28
+      const sideways = Math.max(rightSpace, leftSpace) >= bubbleWidth + 28
       const tip = popup.getElement().querySelector<HTMLElement>('.maplibregl-popup-tip')
       if (sideways) {
         popup.options.anchor = rightSpace >= bubbleWidth + 28 ? 'left' : 'right'
@@ -724,7 +719,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, onSelect, onBoun
       map.off('resize', fitPopup)
       window.visualViewport?.removeEventListener('resize', fitPopup)
     }
-  }, [selectedId, temporaryId, items, onSelect])
+  }, [selectedId, temporaryId, items, mobile, onSelect])
 
   useEffect(() => {
     const map = mapRef.current
@@ -837,9 +832,13 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
   )
 }
 
-function FacilityList({ items, selectedId, stale, mobile, sheetLevel, exhibitionFilter, onSheetLevel, onRefresh, onReset, onClose, onSelect }: {
+function FacilityList({ items, selectedId, selectedFacility, outsideFilters, onBack, onDetailClose, stale, mobile, sheetLevel, exhibitionFilter, onSheetLevel, onRefresh, onReset, onClose, onSelect }: {
   items: Facility[]
   selectedId: string | null
+  selectedFacility?: Facility
+  outsideFilters?: boolean
+  onBack?: () => void
+  onDetailClose?: () => void
   stale: boolean
   mobile: boolean
   sheetLevel: SheetLevel
@@ -850,6 +849,17 @@ function FacilityList({ items, selectedId, stale, mobile, sheetLevel, exhibition
   onClose: () => void
   onSelect: (facility: Facility) => void
 }) {
+  const detailHost = useRef<HTMLDivElement>(null)
+  const listScroll = useRef<HTMLDivElement>(null)
+  const savedScroll = useRef(0)
+  const showDetail = mobile && Boolean(selectedFacility)
+  useEffect(() => {
+    if (!detailHost.current) return
+    detailHost.current.replaceChildren(...(selectedFacility ? [buildPopup(selectedFacility, Boolean(outsideFilters))] : []))
+  }, [selectedFacility, outsideFilters])
+  useEffect(() => {
+    if (!showDetail && listScroll.current) listScroll.current.scrollTop = savedScroll.current
+  }, [showDetail])
   const dragStart = useRef<number | null>(null)
   const onPointerUp = (event: React.PointerEvent) => {
     if (dragStart.current === null) return
@@ -860,18 +870,23 @@ function FacilityList({ items, selectedId, stale, mobile, sheetLevel, exhibition
   }
   return (
     <aside className={`facility-panel ${mobile ? `sheet-level-${sheetLevel}` : ''}`}>
-      <header className="list-header" onPointerDown={event => { dragStart.current = event.clientY }} onPointerUp={onPointerUp}>
+      <header className="list-header" onPointerDown={event => {
+        if ((event.target as HTMLElement).closest('button')) return
+        dragStart.current = event.clientY
+        event.currentTarget.setPointerCapture(event.pointerId)
+      }} onPointerUp={onPointerUp} onPointerCancel={() => { dragStart.current = null }}>
         {mobile && <span className="sheet-grip" />}
-        <div><small>地図の表示範囲</small><h2>この範囲の施設 <b>{items.length}</b></h2></div>
+        {showDetail ? <><Button className="sheet-back" onClick={onBack}>‹ 一覧に戻る</Button><Button onClick={onDetailClose} aria-label="施設情報を閉じる"><Icon name="close" /></Button></> : <><div><small>地図の表示範囲</small><h2>この範囲の施設 <b>{items.length}</b></h2></div>
         {!mobile && <Button onClick={onClose} aria-label="一覧を閉じる"><Icon name="close" /></Button>}
-        {mobile && <Button onClick={() => onSheetLevel(sheetLevel === 0 ? 1 : 0)} aria-label="一覧を開閉"><Icon name="chevron" /></Button>}
+        {mobile && <Button onClick={() => onSheetLevel(sheetLevel === 0 ? 1 : 0)} aria-label="一覧を開閉"><Icon name="chevron" /></Button>}</>}
       </header>
-      {stale && <Button className="refresh-area" onClick={onRefresh}><Icon name="refresh" size={16} />この範囲で一覧を更新</Button>}
-      <div className="list-scroll">
-        {items.length ? items.map(facility => <FacilityCard key={facility.id} facility={facility} selected={selectedId === facility.id} exhibitionFilter={exhibitionFilter} onSelect={() => onSelect(facility)} />) : (
+      {stale && !showDetail && <Button className="refresh-area" onClick={onRefresh}><Icon name="refresh" size={16} />この範囲で一覧を更新</Button>}
+      <div className="list-scroll" ref={listScroll} style={showDetail ? { display: 'none' } : undefined}>
+        {items.length ? items.map(facility => <FacilityCard key={facility.id} facility={facility} selected={selectedId === facility.id} exhibitionFilter={exhibitionFilter} onSelect={() => { savedScroll.current = listScroll.current?.scrollTop || 0; onSelect(facility) }} />) : (
           <div className="list-empty"><Icon name="info" size={25} /><strong>この範囲には条件に一致する施設がありません</strong><Button onClick={onReset}>初期条件に戻す</Button></div>
         )}
       </div>
+      <div className="sheet-detail" ref={detailHost} hidden={!showDetail} />
     </aside>
   )
 }
@@ -883,6 +898,7 @@ function App() {
   const [filterOpen, setFilterOpen] = useState(false)
   const [listOpen, setListOpen] = useState(false)
   const [sheetLevel, setSheetLevel] = useState<SheetLevel>(0)
+  const previousListLevel = useRef<SheetLevel>(1)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [temporaryId, setTemporaryId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -917,7 +933,10 @@ function App() {
   }, [])
   const handleSelect = useCallback((facility: Facility | null) => {
     setSelectedId(facility?.id || null)
-    if (facility && mobile) setSheetLevel(0)
+    if (mobile) {
+      if (facility) previousListLevel.current = 1
+      setSheetLevel(facility ? 1 : 0)
+    }
   }, [mobile])
   const handleMapError = useCallback((value: boolean) => setMapError(value), [])
 
@@ -928,6 +947,7 @@ function App() {
     }
     setListOpen(true)
     if (mobile) {
+      setSelectedId(null)
       setListBounds(liveBoundsRef.current)
       setSheetLevel(1)
     } else {
@@ -937,13 +957,14 @@ function App() {
   const selectFromList = (facility: Facility) => {
     setTemporaryId(null)
     setSelectedId(facility.id)
-    if (mobile) setSheetLevel(0)
+    if (mobile) previousListLevel.current = sheetLevel || 1
   }
   const selectSearch = (facility: Facility) => {
     setQuery(facility.name)
     setSuggestionsOpen(false)
     setTemporaryId(matchesFilters(facility, filters) ? null : facility.id)
     setSelectedId(facility.id)
+    if (mobile) setSheetLevel(1)
   }
   const openFilters = () => {
     setDraft(cloneFilters(filters))
@@ -999,7 +1020,7 @@ function App() {
       {activeChips.length > 0 && <div className="active-chips">{activeChips.map(chip => <Button key={chip.key} onClick={chip.remove}>{chip.label}<Icon name="close" size={12} /></Button>)}</div>}
 
       <section className="map-area">
-        <MapCanvas items={visible} selectedId={filterOpen ? null : selectedId} temporaryId={temporaryId} layoutKey={layoutKey} onSelect={handleSelect} onBounds={handleBounds} onErrorChange={handleMapError} />
+        <MapCanvas items={visible} selectedId={filterOpen ? null : selectedId} temporaryId={temporaryId} layoutKey={layoutKey} mobile={mobile} onSelect={handleSelect} onBounds={handleBounds} onErrorChange={handleMapError} />
       </section>
 
       {!mapError && <div className={`map-legend ${legendOpen ? 'open' : ''}`}>
@@ -1009,7 +1030,7 @@ function App() {
         ))}</div>}
       </div>}
 
-      {effectiveListOpen && !filterOpen && <FacilityList items={listItems} selectedId={selectedId} stale={boundsStale} mobile={mobile} sheetLevel={sheetLevel} exhibitionFilter={filters.exhibition} onSheetLevel={level => { setSheetLevel(level); if (level > 0) setSelectedId(null); if (!listBounds) setListBounds(liveBoundsRef.current) }} onRefresh={() => setListBounds(liveBoundsRef.current)} onReset={initialReset} onClose={() => setListOpen(false)} onSelect={selectFromList} />}
+      {effectiveListOpen && !filterOpen && <FacilityList items={listItems} selectedId={selectedId} selectedFacility={mobile ? facilities.find(item => item.id === selectedId) : undefined} outsideFilters={temporaryId === selectedId} onBack={() => { setSelectedId(null); setSheetLevel(previousListLevel.current); if (!listBounds) setListBounds(liveBoundsRef.current) }} onDetailClose={() => { setSelectedId(null); setSheetLevel(0) }} stale={boundsStale} mobile={mobile} sheetLevel={sheetLevel} exhibitionFilter={filters.exhibition} onSheetLevel={level => { setSheetLevel(level); if (level === 0) setSelectedId(null); if (!listBounds) setListBounds(liveBoundsRef.current) }} onRefresh={() => setListBounds(liveBoundsRef.current)} onReset={initialReset} onClose={() => setListOpen(false)} onSelect={selectFromList} />}
       {mobile && !selectedId && !filterOpen && sheetLevel === 0 && <Button className="mobile-list-peek" onClick={openList}><span /><div>この範囲の施設 <b>{currentRangeCount}</b></div><Icon name="chevron" size={16} /></Button>}
 
       {filterOpen && <FilterPanel draft={draft} onChange={setDraft} onClose={() => setFilterOpen(false)} onApply={applyFilters} />}
