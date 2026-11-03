@@ -194,6 +194,7 @@ function displayCategories(facility: Facility) {
 type ScheduleDisplay = { today: string; regular: string; closed: string; details: string }
 
 function closureDisplay(value: string) {
+  if (value === '休館日は公式カレンダーをご確認ください') return value
   const cleaned = value.split(/入場料|観覧料|入館料|料金|最寄り駅|アクセス|交通案内|お問い合わせ|お問合せ|Instagram|facebook|twitter|Copyright|PAGE TOP|###|主催|共催|会場|会期|開館時間|営業時間|施設紹介|見る・参加する/i)[0]
     .replace(/^(?:休館日等|休館日|休園日|定休日)\s*[:：]?\s*/, '').trim()
   if (!cleaned || cleaned.length > 160 || /\.\.\.|…|https?:|wordlim|/.test(cleaned)) return '休館日は公式カレンダーをご確認ください'
@@ -224,7 +225,7 @@ function scheduleDisplay(facility: Facility): ScheduleDisplay {
       .trim()
     : ''
   const reservationSlots = facility.reservation === 'required' || facility.schedule_applicability === 'reservation_calendar'
-  if (!summary) return { today: reservationSlots ? '予約枠による' : '—', regular: reservationSlots ? '予約枠による' : '—', closed: '—', details: '' }
+  if (!summary) return { today: reservationSlots ? '予約枠による' : '—', regular: reservationSlots ? '予約枠による' : '—', closed: structured?.holiday_rule || '—', details: '' }
   const sentences = summary.split('。').map(value => value.trim()).filter(Boolean)
   const closureClauses = summary.split(/[。、]/).map(value => value.trim()).filter(value => /休館|休園|年末年始|定休/.test(value))
   const regularClauses = (sentences[0] || '').split('、').map(value => value.trim()).filter(value => value && !/休館|休園|年末年始|定休/.test(value))
