@@ -117,6 +117,31 @@ button, input { font: inherit; }
 .popup-links { margin-top: 11px; padding-top: 10px; display: flex; gap: 6px; border-top: 1px solid var(--line); }
 .popup-links a { flex: 1; padding: 8px 5px; border: 1px solid var(--brand); border-radius: 7px; color: var(--brand); text-align: center; text-decoration: none; font-size: 9px; font-weight: 700; }
 .popup-links a:first-child { color: white; background: var(--brand); }
+.maplibregl-popup-content { border-radius: 20px; }
+.map-popup { width: min(370px,calc(100vw - 60px)); padding: 21px; }
+.popup-topline { font-size: 12px; }
+.popup-title { margin-top: 8px; font-size: 22px; }
+.popup-schedule { margin-top: 18px; }
+.popup-schedule h3 { margin: 0 0 9px; font-size: 14px; }
+.popup-schedule > .popup-hours-box { display: block; padding: 13px 16px; background: #f1f6f3; border-radius: 12px; }
+.popup-today-hours { display: block; font-size: 25px; font-weight: 500; }
+.popup-today-hours.popup-hours-message { font-size: 15px; line-height: 1.6; }
+.popup-schedule details { margin-top: 8px; padding-left: 0; }
+.popup-schedule summary { font-size: 12px; }
+.popup-schedule dl { display: grid; grid-template-columns: 85px minmax(0,1fr); gap: 9px; margin: 13px 0 0; font-size: 12px; line-height: 1.7; }
+.popup-schedule dt { color: var(--muted); }
+.popup-schedule dd { margin: 0; white-space: pre-line; }
+.popup-exhibitions { margin-top: 18px; padding-top: 0; border-top: 0; }
+.popup-exhibition-heading { margin-bottom: 9px; font-size: 14px; }
+.popup-exhibitions > div { padding: 14px 16px; background: #faf5ed; border-radius: 12px; border-left: 3px solid #a14f73; }
+.popup-exhibitions > div + div { margin-top: 10px; border-top: 0; }
+.popup-exhibitions em { margin-bottom: 5px; padding: 0; background: transparent; font-size: 11px; font-weight: 500; }
+.popup-exhibitions strong { font-size: 18px; line-height: 1.5; }
+.popup-exhibitions span { margin-top: 5px; font-size: 12px; }
+.popup-exhibitions > div > a { font-size: 12px; }
+.popup-links { margin-top: 18px; padding-top: 0; border-top: 0; gap: 9px; }
+.popup-links a { padding: 12px 5px; border-radius: 10px; font-size: 12px; }
+.popup-notice { font-size: 12px; }
 
 .map-legend { position: fixed; left: 12px; bottom: 48px; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.95); box-shadow: 0 4px 16px rgba(23,48,42,.1); z-index: 25; }
 .desktop-list-open .map-legend { left: 392px; }
