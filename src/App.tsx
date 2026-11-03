@@ -893,7 +893,7 @@ function FacilityList({ items, selectedId, selectedFacility, canGoBack, outsideF
         event.currentTarget.setPointerCapture(event.pointerId)
       }} onPointerUp={onPointerUp} onPointerCancel={() => { dragStart.current = null }}>
         {mobile && <span className="sheet-grip" />}
-        {showDetail ? <><Button className="sheet-back" onClick={onBack}>{canGoBack ? '‹ 一覧に戻る' : '一覧を表示'}</Button><Button onClick={onDetailClose} aria-label="施設情報を閉じる"><Icon name="close" /></Button></> : <><div><small>地図の中央から近い順</small><h2>この範囲の施設 <b>{items.length}</b></h2></div>
+        {showDetail ? <><Button className="sheet-back" onClick={onBack}>{canGoBack ? '‹ 一覧に戻る' : '‹ 一覧を表示'}</Button><Button onClick={onDetailClose} aria-label="施設情報を閉じる"><Icon name="close" /></Button></> : <><div><small>地図の中央から近い順</small><h2>この範囲の施設 <b>{items.length}</b></h2></div>
         {!mobile && <Button onClick={onClose} aria-label="一覧を閉じる"><Icon name="close" /></Button>}
         {mobile && <Button className="list-collapse" onClick={() => onSheetLevel(0)} aria-label="一覧を折りたたむ"><Icon name="chevron" /></Button>}</>}
       </header>
