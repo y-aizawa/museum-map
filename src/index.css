@@ -69,6 +69,7 @@ button, input { font: inherit; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .museum-marker-anchor { width: 44px; height: 44px; position: absolute; left: 0; top: 0; display: flex; align-items: center; justify-content: center; overflow: visible; pointer-events: auto; will-change: transform; backface-visibility: hidden; contain: layout style; }
+.museum-marker-anchor.selected { z-index: 10; }
 .museum-pin { --pin: var(--gray); width: 44px; height: 44px; padding: 5px; position: relative; display: flex; align-items: center; justify-content: center; border: 0; color: white; background: transparent; cursor: pointer; }
 .museum-pin::before { content: ''; position: absolute; left: 50%; top: 37px; transform: translateX(-50%); border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid var(--pin); }
 .museum-pin > span { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1.5px solid rgba(255,255,255,.92); border-radius: 50%; color: white; background: var(--pin); box-shadow: 0 2px 3px rgba(23,48,42,.16); font-size: 11px; font-weight: 700; line-height: 1; }
