@@ -190,8 +190,7 @@ function isInBounds(facility: Facility, bounds: BoundsValue | null) {
 }
 
 function displayCategories(facility: Facility) {
-  if (getCategoryGroup(facility) === 'unconfirmed') return ['未分類']
-  return [...new Set([facility.category, ...facility.categories].filter(Boolean))]
+  return [categoryLabels[getCategoryGroup(facility)]]
 }
 
 type ScheduleDisplay = { today: string; regular: string; closed: string; details: string }
