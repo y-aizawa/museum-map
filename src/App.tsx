@@ -332,25 +332,47 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   const schedule = scheduleDisplay(facility)
   const scheduleElement = document.createElement('div')
   scheduleElement.className = 'popup-schedule'
-  ;([['本日', schedule.today], ['通常', schedule.regular], ['休館', schedule.closed]] as const).forEach(([label, value]) => {
-    if (value === '—') return
-    const row = document.createElement('div')
-    const key = document.createElement('span')
-    key.textContent = label
-    const content = document.createElement('p')
-    content.textContent = value
-    row.append(key, content)
-    scheduleElement.append(row)
-  })
-  if (schedule.details) {
+  const hoursHeading = document.createElement('h3')
+  hoursHeading.textContent = '本日の開館時間'
+  const hoursBox = document.createElement('div')
+  hoursBox.className = 'popup-hours-box'
+  const todayHours = document.createElement('strong')
+  todayHours.className = 'popup-today-hours'
+  todayHours.textContent = facility.operational_status === 'closed' ? '閉館しました'
+    : facility.operational_status === 'suspended' ? '休館中'
+    : schedule.today !== '—' ? schedule.today : '公式サイトでご確認ください'
+  if (schedule.today === '—') todayHours.classList.add('popup-hours-message')
+  hoursBox.append(todayHours)
+  if (schedule.details || schedule.regular !== '—' || schedule.closed !== '—') {
     const details = document.createElement('details')
     const summary = document.createElement('summary')
-    summary.textContent = '曜日別の時間'
-    const content = document.createElement('p')
-    content.textContent = schedule.details
+    summary.textContent = '曜日別の時間・休館日'
+    const content = document.createElement('dl')
+    const addRow = (label: string, value: string) => {
+      if (!value || value === '—') return
+      const key = document.createElement('dt')
+      key.textContent = label
+      const valueElement = document.createElement('dd')
+      valueElement.textContent = value
+      content.append(key, valueElement)
+    }
+    const structured = facility.schedule
+    if (structured?.weekly?.length) {
+      const dayNames: Record<string, string> = { mo: '月', tu: '火', we: '水', th: '木', fr: '金', sa: '土', su: '日' }
+      structured.weekly.forEach(rule => {
+        addRow(rule.days.map(day => dayNames[day] || day).join('・'), `${rule.open}–${rule.close}`)
+        if (rule.last_admission) addRow('最終入館', rule.last_admission)
+      })
+      addRow('休館日等', structured.holiday_rule || schedule.closed)
+    } else {
+      addRow('通常時間', schedule.regular)
+      addRow('休館日', schedule.closed)
+      if (schedule.details !== schedule.regular) addRow('補足', schedule.details)
+    }
     details.append(summary, content)
-    scheduleElement.append(details)
+    hoursBox.append(details)
   }
+  scheduleElement.append(hoursHeading, hoursBox)
   root.append(scheduleElement)
   const tags = conditionTags(facility)
   if (tags.length) {
@@ -376,14 +398,18 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
     note.textContent = '現在のフィルター条件外の施設です'
     root.append(note)
   }
-  if (facility.special_exhibitions?.length) {
+  const visibleExhibitions = (facility.special_exhibitions || [])
+    .filter(exhibition => !exhibition.end_date || exhibition.end_date >= todayInTokyo())
+    .sort((left, right) => Number(exhibitionPhase(right) === '開催中') - Number(exhibitionPhase(left) === '開催中')
+      || (left.start_date || '').localeCompare(right.start_date || ''))
+  if (visibleExhibitions.length) {
     const exhibitionSection = document.createElement('div')
     exhibitionSection.className = 'popup-exhibitions'
     const exhibitionHeading = document.createElement('b')
     exhibitionHeading.className = 'popup-exhibition-heading'
     exhibitionHeading.textContent = '特別展'
     exhibitionSection.append(exhibitionHeading)
-    facility.special_exhibitions
+    visibleExhibitions
       .map((exhibition, index) => ({ exhibition, index, phase: exhibitionPhase(exhibition) }))
       .sort((left, right) => Number(right.phase === '開催中') - Number(left.phase === '開催中') || left.index - right.index)
       .forEach(({ exhibition, phase }) => {
@@ -618,7 +644,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, onSelect, onBoun
     const previousPopup = popupRef.current
     popupRef.current = null
     previousPopup?.remove()
-    const popup = new Popup({ closeButton: true, closeOnClick: true, offset: 28, maxWidth: '340px', focusAfterOpen: true })
+    const popup = new Popup({ closeButton: true, closeOnClick: true, offset: 28, maxWidth: '410px', focusAfterOpen: true })
       .setLngLat([facility.longitude, facility.latitude])
       .setDOMContent(buildPopup(facility, temporaryId === facility.id))
       .addTo(map)
