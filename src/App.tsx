@@ -34,6 +34,13 @@ type Facility = {
   visit_state_label: string
   schedule_summary: string
   schedule_applicability: string
+  schedule?: {
+    applicability?: string
+    valid_from?: string
+    valid_through?: string
+    holiday_rule?: string
+    weekly?: { days: string[]; open: string; close: string; last_admission?: string }[]
+  } | null
   reservation: string
   status_note: string
   address: string
@@ -113,11 +120,11 @@ function getCategoryGroup(facility: Facility): CategoryGroup {
   const explicit = [facility.category, ...facility.categories].join('・')
   if (/動物園/.test(explicit)) return 'zoo'
   if (/水族館/.test(explicit)) return 'aquarium'
-  if (/植物園/.test(explicit)) return 'botanical'
+  if (/植物園|樹木園/.test(explicit)) return 'botanical'
   if (/文学/.test(explicit)) return 'literature'
   if (/美術館/.test(explicit)) return 'art'
-  if (/科学館|プラネタリウム/.test(explicit)) return 'science'
-  if (/記念館|歴史的建築|野外博物館/.test(explicit)) return 'history'
+  if (/科学館|自然史|プラネタリウム/.test(explicit)) return 'science'
+  if (/歴史|記念館|歴史的建築|野外博物館/.test(explicit)) return 'history'
   if (/未分類/.test(explicit) || (!facility.category && !facility.categories.length)) return 'unconfirmed'
   const topics = facility.topics.join('・')
   if (/文学|徳富/.test(topics)) return 'literature'
@@ -181,6 +188,18 @@ type ScheduleDisplay = { today: string; regular: string; closed: string; details
 function scheduleDisplay(facility: Facility): ScheduleDisplay {
   const unavailable = facility.operational_status === 'closed' || facility.operational_status === 'suspended'
   if (unavailable) return { today: '—', regular: '—', closed: '—', details: '' }
+  const structured = facility.schedule
+  const date = todayInTokyo()
+  if (structured?.valid_from && date < structured.valid_from || structured?.valid_through && date > structured.valid_through) {
+    return { today: '—', regular: '—', closed: '—', details: '' }
+  }
+  if (structured?.weekly?.length && ['current_baseline', 'current_exhibition'].includes(facility.schedule_applicability)) {
+    const days: Record<string, string> = { mo: '月', tu: '火', we: '水', th: '木', fr: '金', sa: '土', su: '日' }
+    const lines = structured.weekly.map(rule => `${rule.days.map(day => days[day] || day).join('・')} ${rule.open}–${rule.close}${rule.last_admission ? `（最終入館 ${rule.last_admission}）` : ''}`)
+    // A weekly baseline alone cannot establish today's holiday/temporary closure exceptions.
+    const closed = facility.schedule_summary.split(/[。]/).filter(clause => /休館|休園|定休/.test(clause)).join('。')
+    return { today: '—', regular: lines.length <= 2 ? lines.join('／') : lines[0] + ' ほか', closed: closed || '—', details: [...lines, structured.holiday_rule || ''].filter(Boolean).join('\n') }
+  }
   const currentSchedule = ['current_baseline', 'current_exhibition', 'reservation_calendar'].includes(facility.schedule_applicability)
   const summary = currentSchedule && facility.schedule_summary !== '未確認'
     ? facility.schedule_summary
@@ -464,7 +483,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, onSelect, onBoun
     map.touchZoomRotate.disableRotation()
     map.keyboard.disableRotation()
     map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right')
-    map.addControl(new AttributionControl({ compact: true }), 'bottom-left')
+    map.addControl(new AttributionControl({ compact: true, customAttribution: `<a href="${import.meta.env.BASE_URL}sources.html" target="_blank" rel="noopener noreferrer">施設データの出典</a>` }), 'bottom-left')
     mapRef.current = map
     let styleReady = false
     let failureTimer = 0
