@@ -1,0 +1,981 @@
+{
+  "schema_version": 1,
+  "sample_name": "museum-map-figma-make-30",
+  "as_of": "2026-11-01",
+  "timezone": "Asia/Tokyo",
+  "notes": [
+    "実在施設の確認済み情報を画面試作用に平坦化",
+    "visit_stateは2026-11-01時点のUI表示例であり当日営業を保証しない",
+    "schedule_applicabilityとstatus_noteを優先して表示する"
+  ],
+  "facilities": [
+    {
+      "id": "facility:33fe8d4da6bbdac6",
+      "name": "HANASAKA STAND",
+      "short_name": "HANASAKA STAND",
+      "aliases": [],
+      "category": "展示施設",
+      "categories": [
+        "展示施設"
+      ],
+      "topics": [
+        "企業・技術",
+        "アート"
+      ],
+      "legal_categories": [],
+      "operational_status": "active",
+      "operational_status_label": "開館中",
+      "visit_state": "hours_unconfirmed",
+      "visit_state_label": "開館時間未確認",
+      "schedule_summary": "未確認",
+      "schedule_applicability": "unconfirmed",
+      "reservation": "unknown",
+      "status_note": "ヤンマー公式の現行施設ページで地下1階の映像・展示スペースと2026年10月31日〜11月1日のイベントを確認。ビル全体や米ギャラリーとは別の展示先として保持。常設の開場時間は未確認。",
+      "address": "",
+      "latitude": 35.6798127,
+      "longitude": 139.7694768,
+      "official_url": "https://www.yanmar.com/jp/yanmar_tokyo/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.yanmar.com/jp/yanmar_tokyo/"
+      ]
+    },
+    {
+      "id": "facility:0d412f62af322555",
+      "name": "JAL SKY Museum",
+      "short_name": "JAL SKY Museum",
+      "aliases": [],
+      "category": "博物館",
+      "categories": [
+        "博物館",
+        "産業観光施設"
+      ],
+      "topics": [
+        "航空",
+        "企業史",
+        "技術"
+      ],
+      "legal_categories": [],
+      "operational_status": "active",
+      "operational_status_label": "開館中",
+      "visit_state": "reservation_required",
+      "visit_state_label": "予約制",
+      "schedule_summary": "事前予約したコース開始時刻の約15分前から受付。ミュージアム体験80分、格納庫見学50分。開催日時は予約画面の空き状況で確認。",
+      "schedule_applicability": "reservation_calendar",
+      "reservation": "required",
+      "status_note": "JAL公式の現行見学・予約案内でミュージアム展示80分と格納庫見学50分のコースおよび予約受付を確認。自由入館型ではなく事前予約したコース時刻に訪問する施設。",
+      "address": "",
+      "latitude": 35.5418145,
+      "longitude": 139.7881857,
+      "official_url": "https://www.jal.com/ja/kengaku/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.jal.com/ja/kengaku/info/",
+        "https://www.jal.com/ja/kengaku/reservations/",
+        "https://www.jal.com/ja/kengaku/faq/"
+      ]
+    },
+    {
+      "id": "facility:647484237adfcdc7",
+      "name": "Kawasaki Robostage",
+      "short_name": "Kawasaki Robostage",
+      "aliases": [],
+      "category": "科学館",
+      "categories": [
+        "科学館",
+        "企業展示施設"
+      ],
+      "topics": [
+        "ロボット",
+        "技術"
+      ],
+      "legal_categories": [],
+      "operational_status": "active",
+      "operational_status_label": "開館中",
+      "visit_state": "open_today",
+      "visit_state_label": "本日開館予定",
+      "schedule_summary": "平日13:00〜18:00、土日祝10:00〜18:00。火曜休館（祝日は開館）、年末年始休館。15名以下は予約不要、16名以上は要予約。臨時変更あり。",
+      "schedule_applicability": "current_baseline",
+      "reservation": "not_required_up_to_15;required_16_or_more",
+      "status_note": "2025年4月からのリニューアル休館告知に対し、2026年の現行公式ページ・FAQで開館時間と見学案内を確認したため再開済みとして扱う。",
+      "address": "",
+      "latitude": 35.6278413,
+      "longitude": 139.7761001,
+      "official_url": "https://kawasakirobotics.com/jp-sp/robostage",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://kawasakirobotics.com/jp-sp/robostage/",
+        "https://kawasakirobotics.com/jp-sp/robostage/faq/",
+        "https://kawasakirobotics.com/jp/news/20250225_robostage/"
+      ]
+    },
+    {
+      "id": "facility:5d40ba82f0c1fa5e",
+      "name": "MMM Maison des Musees du Monde",
+      "short_name": "MMM Maison des Musees du Monde",
+      "aliases": [],
+      "category": "未分類",
+      "categories": [],
+      "topics": [],
+      "legal_categories": [],
+      "operational_status": "unknown",
+      "operational_status_label": "現況未確認",
+      "visit_state": "unconfirmed",
+      "visit_state_label": "要確認",
+      "schedule_summary": "未確認",
+      "schedule_applicability": "unconfirmed",
+      "reservation": "unknown",
+      "status_note": "10月21日店舗の商品販売終了と年内Web/SNS終了予定は公式確認。ただしB1ライブラリ等の公開も終了したかは明記されず、施設全体の閉館は未確定。",
+      "address": "",
+      "latitude": 35.6696832,
+      "longitude": 139.7625645,
+      "official_url": "https://www.mmm-ginza.org/top.html",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.mmm-ginza.org/mmm_end/index.html",
+        "https://www.mmm-ginza.org/top.html"
+      ]
+    },
+    {
+      "id": "facility:5ac59a8096f54b34",
+      "name": "WHAT Museum",
+      "short_name": "WHAT Museum",
+      "aliases": [],
+      "category": "美術館",
+      "categories": [
+        "美術館"
+      ],
+      "topics": [
+        "現代美術",
+        "建築"
+      ],
+      "legal_categories": [],
+      "operational_status": "active",
+      "operational_status_label": "開館中",
+      "visit_state": "calendar_check_required",
+      "visit_state_label": "公式カレンダー確認",
+      "schedule_summary": "座標展10:00–17:00、最終入館16:30。建築倉庫11:00–18:00、最終入館17:00。月曜休館の原則と祝日例外は別途公式カレンダー照合待ち。12/21–12/31全館休館予定。",
+      "schedule_applicability": "current_exhibition",
+      "reservation": "exhibition_free;architecture_separate_ticket",
+      "status_note": "9月の展示替え休館の投稿がトップに残るが、詳細な営業予定で10月10日–12月20日の展示公開を確認。建築倉庫と展覧会の時間は別。",
+      "address": "",
+      "latitude": 35.6206847,
+      "longitude": 139.7485642,
+      "official_url": "https://what.warehouseofart.org",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://what.warehouseofart.org/news/20260914/"
+      ]
+    },
+    {
+      "id": "facility:0e102e226ccbfed0",
+      "name": "くにたち郷土文化館",
+      "short_name": "くにたち郷土文化館",
+      "aliases": [],
+      "category": "博物館",
+      "categories": [
+        "博物館"
+      ],
+      "topics": [
+        "郷土・歴史"
+      ],
+      "legal_categories": [
+        "registered_museum",
+        "similar_museum_facility"
+      ],
+      "operational_status": "suspended",
+      "operational_status_label": "休止中",
+      "visit_state": "temporarily_closed",
+      "visit_state_label": "休止中",
+      "schedule_summary": "通常9:00–17:00、入館16:30まで。通常休館日は公式カレンダー参照。改修休館と年末年始休館を優先。",
+      "schedule_applicability": "suspended_baseline",
+      "reservation": "unknown",
+      "status_note": "11月1日から大規模改修休館。12月29日から2027年1月3日は年末年始休館。庭園・屋外施設の利用制限は2027年1・2月も継続予定。",
+      "address": "",
+      "latitude": 35.678984,
+      "longitude": 139.43259,
+      "official_url": "https://kuzaidan.or.jp/province/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://kuzaidan.or.jp/province/news/郷土文化館臨時休館のお知らせ-2/"
+      ]
+    },
+    {
+      "id": "facility:5a435e9137ee9fbe",
+      "name": "こども鉱物館",
+      "short_name": "こども鉱物館",
+      "aliases": [],
+      "category": "博物館",
+      "categories": [
+        "博物館"
+      ],
+      "topics": [
+        "自然史・鉱物"
+      ],
+      "legal_categories": [],
+      "operational_status": "suspended",
+      "operational_status_label": "休止中",
+      "visit_state": "temporarily_closed",
+      "visit_state_label": "休止中",
+      "schedule_summary": "従来は10:00–17:00・月曜休館・電話予約制。5名以上の小中学生グループ、成人引率2名まで、幼児入館不可。現在は休館し予約停止。",
+      "schedule_applicability": "suspended_baseline",
+      "reservation": "required_group_children_only",
+      "status_note": "当分休館・予約カレンダー閉鎖の表示が現在も継続。再開日未定。",
+      "address": "",
+      "latitude": 35.6744925,
+      "longitude": 139.7092578,
+      "official_url": "http://www.kodomokoubutsukan.com/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "http://www.kodomokoubutsukan.com/"
+      ]
+    },
+    {
+      "id": "facility:14335974b6aa9069",
+      "name": "めぐろ歴史資料館",
+      "short_name": "めぐろ歴史資料館",
+      "aliases": [],
+      "category": "博物館",
+      "categories": [
+        "博物館"
+      ],
+      "topics": [
+        "郷土・歴史"
+      ],
+      "legal_categories": [
+        "similar_museum_facility"
+      ],
+      "operational_status": "suspended",
+      "operational_status_label": "休止中",
+      "visit_state": "temporarily_closed",
+      "visit_state_label": "休止中",
+      "schedule_summary": "未確認",
+      "schedule_applicability": "unconfirmed",
+      "reservation": "unknown",
+      "status_note": "機能移転準備のため休館。2026年度からの郷土資料室事務所への変更を展示再開や地図位置の移転と扱わない。",
+      "address": "目黒区中目黒3-6-10",
+      "latitude": 35.639414,
+      "longitude": 139.702817,
+      "official_url": "https://www.city.meguro.tokyo.jp/shougaigakushuu/shisetsu/bunkakouryuu/megurorekisisiryokan.html",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.city.meguro.tokyo.jp/shougaigakushuu/shisetsu/bunkakouryuu/megurorekisisiryokan.html"
+      ]
+    },
+    {
+      "id": "facility:6a0db0fb48f60895",
+      "name": "アドミュージアム東京",
+      "short_name": "アドミュージアム東京",
+      "aliases": [
+        "アド・ミュージアム東京"
+      ],
+      "category": "博物館",
+      "categories": [
+        "博物館"
+      ],
+      "topics": [
+        "広告",
+        "デザイン",
+        "企業文化"
+      ],
+      "legal_categories": [
+        "designated_facility"
+      ],
+      "operational_status": "active",
+      "operational_status_label": "開館中",
+      "visit_state": "closed_today",
+      "visit_state_label": "本日休館予定",
+      "schedule_summary": "火〜土曜12:00〜18:00。日・月曜休館、ほか臨時休館あり。入場無料。月別開館カレンダーを優先。",
+      "schedule_applicability": "current_baseline",
+      "reservation": "not_required",
+      "status_note": "公式の2026年10月開館カレンダーと10月31日までの企画展を確認。11月1日は通常休館の日曜であり、施設休止・閉館とは扱わない。",
+      "address": "東京都港区東新橋一丁目8-2",
+      "latitude": 35.6645224,
+      "longitude": 139.7626413,
+      "official_url": "https://www.admt.jp/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.admt.jp/guide/",
+        "https://www.admt.jp/exhibition/program/",
+        "https://www.admt.jp/communication/"
+      ]
+    },
+    {
+      "id": "facility:7d18b9af5ef76262",
+      "name": "サムライミュージアム",
+      "short_name": "サムライミュージアム",
+      "aliases": [],
+      "category": "博物館",
+      "categories": [
+        "博物館"
+      ],
+      "topics": [
+        "歴史・刀剣甲冑"
+      ],
+      "legal_categories": [],
+      "operational_status": "suspended",
+      "operational_status_label": "休止中",
+      "visit_state": "temporarily_closed",
+      "visit_state_label": "休止中",
+      "schedule_summary": "未確認",
+      "schedule_applicability": "unconfirmed",
+      "reservation": "unknown",
+      "status_note": "歌舞伎町の旧サムライミュージアムは当面休館・再開時期未定の公式表示。新宿5丁目のサムライ忍者体験ミュージアムとは別施設。",
+      "address": "",
+      "latitude": 35.6955176,
+      "longitude": 139.7035629,
+      "official_url": "https://samuraimuseum.jp",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://samuraimuseum.jp"
+      ]
+    },
+    {
+      "id": "facility:5f15852afa6b07e5",
+      "name": "サントリー美術館",
+      "short_name": "サントリー美術館",
+      "aliases": [],
+      "category": "美術館",
+      "categories": [
+        "美術館"
+      ],
+      "topics": [
+        "日本美術",
+        "工芸",
+        "古美術"
+      ],
+      "legal_categories": [],
+      "operational_status": "active",
+      "operational_status_label": "開館中",
+      "visit_state": "open_today",
+      "visit_state_label": "本日開館予定",
+      "schedule_summary": "通常10:00〜18:00、金曜は20:00まで。最終入館は閉館30分前。火曜・展示替期間・年末年始休館。展覧会ごとの変更を優先。",
+      "schedule_applicability": "current_exhibition",
+      "reservation": "not_required",
+      "status_note": "公式トップで本日展覧会開催中と表示され、2026年9月16日〜11月8日の企画展を確認。常設展はなく展示替期間は休館する。",
+      "address": "",
+      "latitude": 35.6664346,
+      "longitude": 139.7304575,
+      "official_url": "https://www.suntory.co.jp/sma/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.suntory.co.jp/sma/",
+        "https://www.suntory.co.jp/sma/basicinfo/",
+        "https://www.suntory.co.jp/sma/press/list_exhibition/"
+      ]
+    },
+    {
+      "id": "facility:5135bd773dff2f44",
+      "name": "マダム・タッソー東京",
+      "short_name": "マダム・タッソー東京",
+      "aliases": [],
+      "category": "博物館",
+      "categories": [
+        "博物館"
+      ],
+      "topics": [
+        "蝋人形・娯楽展示"
+      ],
+      "legal_categories": [],
+      "operational_status": "closed",
+      "operational_status_label": "閉館済み",
+      "visit_state": "permanently_closed",
+      "visit_state_label": "閉館済み",
+      "schedule_summary": "未確認",
+      "schedule_applicability": "unconfirmed",
+      "reservation": "unknown",
+      "status_note": "公式の営業終了告知で2026年9月30日を最終営業日と確認。旧URLも保持し閉館後の案内先へ転送されることを記録。",
+      "address": "",
+      "latitude": 35.6291304,
+      "longitude": 139.7760685,
+      "official_url": "https://www.madametussauds.jp/tokyo/ja/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.madametussauds.com/tokyo/thank-you/"
+      ]
+    },
+    {
+      "id": "facility:dde84f2bd8e5912d",
+      "name": "ヨドバシ フジサワ カメラミュージアム",
+      "short_name": "ヨドバシ フジサワ カメラミュージアム",
+      "aliases": [],
+      "category": "博物館",
+      "categories": [
+        "博物館"
+      ],
+      "topics": [
+        "カメラ",
+        "写真",
+        "企業コレクション"
+      ],
+      "legal_categories": [],
+      "operational_status": "active",
+      "operational_status_label": "開館中",
+      "visit_state": "open_today",
+      "visit_state_label": "本日開館予定",
+      "schedule_summary": "10:00〜18:00、最終入館17:00。年末年始を除き年中無休、別途休館の場合あり。事前予約なしの当日入館も可能。",
+      "schedule_applicability": "current_baseline",
+      "reservation": "optional;advance_discount",
+      "status_note": "公式の現行来館案内で展示内容、営業時間、料金、当日入館条件を確認。事前予約なしでも当日券で入館可能だが料金が異なる。",
+      "address": "",
+      "latitude": 35.6917802,
+      "longitude": 139.7110882,
+      "official_url": "https://www.yodobashi.com/museum/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.yodobashi.com/museum/"
+      ]
+    },
+    {
+      "id": "facility:1f9600befe3380d6",
+      "name": "多摩六都科学館",
+      "short_name": "多摩六都科学館",
+      "aliases": [],
+      "category": "科学館",
+      "categories": [
+        "科学館",
+        "プラネタリウム"
+      ],
+      "topics": [
+        "科学",
+        "宇宙",
+        "体験展示"
+      ],
+      "legal_categories": [
+        "designated_facility"
+      ],
+      "operational_status": "active",
+      "operational_status_label": "開館中",
+      "visit_state": "open_today",
+      "visit_state_label": "本日開館予定",
+      "schedule_summary": "9:30〜17:00、発券16:00まで。月曜（祝日・振替休日は開館し翌日休館）、祝日の翌日、年末年始、機器整備日休館。投影時刻は当日カレンダー参照。",
+      "schedule_applicability": "current_baseline",
+      "reservation": "same_day_ticket;program_capacity_applies",
+      "status_note": "公式トップの2026年10月更新と現行イベントカレンダーで展示・投影の実施を確認。直接取得時の503は閉館ではない。",
+      "address": "西東京市芝久保町510-64",
+      "latitude": 35.7345533,
+      "longitude": 139.5230366,
+      "official_url": "https://www.tamarokuto.or.jp/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.tamarokuto.or.jp/",
+        "https://www.tamarokuto.or.jp/guide/",
+        "https://www.tamarokuto.or.jp/calendar/"
+      ]
+    },
+    {
+      "id": "facility:e390ade82409e9d7",
+      "name": "小平ふるさと村",
+      "short_name": "小平ふるさと村",
+      "aliases": [],
+      "category": "野外博物館",
+      "categories": [
+        "野外博物館",
+        "歴史的建築"
+      ],
+      "topics": [
+        "郷土・歴史",
+        "農村生活",
+        "文化財"
+      ],
+      "legal_categories": [],
+      "operational_status": "active",
+      "operational_status_label": "開館中",
+      "visit_state": "open_today",
+      "visit_state_label": "本日開館予定",
+      "schedule_summary": "10:00〜16:00。月曜・第3火曜（休日の場合は翌日）、休日の翌日（土日なら開園）、12月27日〜1月5日休園。行事による臨時変更あり。",
+      "schedule_applicability": "current_baseline",
+      "reservation": "not_required",
+      "status_note": "公式サイトの2026年10月更新、当日の村まつり案内、復元建物と資料展示の案内を確認。",
+      "address": "",
+      "latitude": 35.7313612,
+      "longitude": 139.5004565,
+      "official_url": "https://www.kodaira-furusatomura.jp/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.kodaira-furusatomura.jp/",
+        "https://www.kodaira-furusatomura.jp/detail/z00011.html"
+      ]
+    },
+    {
+      "id": "facility:7292b872b4e284ff",
+      "name": "山王草堂記念館",
+      "short_name": "山王草堂記念館",
+      "aliases": [],
+      "category": "記念館",
+      "categories": [
+        "記念館",
+        "歴史的建築"
+      ],
+      "topics": [
+        "徳富蘇峰",
+        "近代史",
+        "旧宅"
+      ],
+      "legal_categories": [],
+      "operational_status": "active",
+      "operational_status_label": "開館中",
+      "visit_state": "open_today",
+      "visit_state_label": "本日開館予定",
+      "schedule_summary": "9:00〜16:30、入館16:00まで。12月29日〜1月3日と臨時休館日を除き開館。入館無料。",
+      "schedule_applicability": "current_baseline",
+      "reservation": "not_required",
+      "status_note": "運営財団の現行利用案内と2026年10月更新の施設ページで展示公開を確認。",
+      "address": "",
+      "latitude": 35.5932525,
+      "longitude": 139.7211009,
+      "official_url": "https://www.ota-bunka.or.jp/facilities/sanno",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.ota-bunka.or.jp/facilities/sanno",
+        "https://www.ota-bunka.or.jp/facilities/sanno/guide",
+        "https://www.ota-bunka.or.jp/facilities/sanno/exhibition"
+      ]
+    },
+    {
+      "id": "facility:0469685188a3e3b9",
+      "name": "川越道緑地古民家園",
+      "short_name": "川越道緑地古民家園",
+      "aliases": [],
+      "category": "博物館",
+      "categories": [
+        "博物館"
+      ],
+      "topics": [
+        "歴史的建築・民俗"
+      ],
+      "legal_categories": [
+        "similar_museum_facility"
+      ],
+      "operational_status": "suspended",
+      "operational_status_label": "休止中",
+      "visit_state": "temporarily_closed",
+      "visit_state_label": "休止中",
+      "schedule_summary": "通常9:00–16:30。月曜休館（祝日・振替休日は翌日）、12/29–1/3休館。現在の工事休園を優先。",
+      "schedule_applicability": "suspended_baseline",
+      "reservation": "group_visit_requires_inquiry",
+      "status_note": "管理施設等の改修で休園し古民家見学不可。終了日は予定。",
+      "address": "立川市幸町4-65",
+      "latitude": 35.725468,
+      "longitude": 139.426689,
+      "official_url": "https://www.city.tachikawa.lg.jp/shisetsu/1008065/1008100.html",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.city.tachikawa.lg.jp/shisetsu/1008065/1008100.html"
+      ]
+    },
+    {
+      "id": "facility:dae08c58cbae3793",
+      "name": "慶應義塾ミュージアム・コモンズ（KeMCo）",
+      "short_name": "KeMCo",
+      "aliases": [],
+      "category": "大学博物館",
+      "categories": [
+        "大学博物館",
+        "美術館"
+      ],
+      "topics": [
+        "大学コレクション",
+        "現代美術"
+      ],
+      "legal_categories": [],
+      "operational_status": "active",
+      "operational_status_label": "開館中",
+      "visit_state": "closed_today",
+      "visit_state_label": "本日休館予定",
+      "schedule_summary": "会期中11:00〜18:00、原則土日祝休館。11月6日は19:00まで。10月31日・11月28日・12月19日は特別開館、11月30日・12月14日は臨時休館。入場無料・予約不要。",
+      "schedule_applicability": "current_exhibition",
+      "reservation": "not_required",
+      "status_note": "公式の2026年8月4日〜10月27日休館告知より新しい10月28日開幕の展覧会を確認。11月1日は通常休館の日曜で、施設休止とは扱わない。",
+      "address": "東京都港区三田2-15-45 慶應義塾大学三田キャンパス東別館",
+      "latitude": 35.6487799596407,
+      "longitude": 139.74434389437442,
+      "official_url": "https://kemco.keio.ac.jp/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://kemco.keio.ac.jp/whats-on/",
+        "https://kemco.keio.ac.jp/all-post/20261028/",
+        "https://www.keio.ac.jp/ja/about/engagement/society/news/2608041/"
+      ]
+    },
+    {
+      "id": "facility:e9f328d38ad46000",
+      "name": "明治神宮聖徳記念絵画館",
+      "short_name": "明治神宮聖徳記念絵画館",
+      "aliases": [],
+      "category": "美術館",
+      "categories": [
+        "美術館"
+      ],
+      "topics": [
+        "歴史"
+      ],
+      "legal_categories": [],
+      "operational_status": "suspended",
+      "operational_status_label": "休止中",
+      "visit_state": "temporarily_closed",
+      "visit_state_label": "休止中",
+      "schedule_summary": "未確認",
+      "schedule_applicability": "unconfirmed",
+      "reservation": "unknown",
+      "status_note": "保存修理工事で休館。2026年10月21日の変更告知により2027年8月末までの予定。撮影等の受付は展示見学の再開ではない。",
+      "address": "",
+      "latitude": 35.6787743,
+      "longitude": 139.7175979,
+      "official_url": "https://www.meijijingugaien.jp/art-culture/seitoku-gallery/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.meijijingugaien.jp/art-culture/seitoku-gallery/important/102159.html"
+      ]
+    },
+    {
+      "id": "facility:084d083a85c62d08",
+      "name": "東京ガス「がすてなーに ガスの科学館」",
+      "short_name": "がすてなーに",
+      "aliases": [],
+      "category": "科学館",
+      "categories": [
+        "科学館"
+      ],
+      "topics": [
+        "エネルギー"
+      ],
+      "legal_categories": [],
+      "operational_status": "closed",
+      "operational_status_label": "閉館済み",
+      "visit_state": "permanently_closed",
+      "visit_state_label": "閉館済み",
+      "schedule_summary": "未確認",
+      "schedule_applicability": "unconfirmed",
+      "reservation": "unknown",
+      "status_note": "2026年9月23日を最終開館日として閉館。旧営業時間を現在の訪問案内に使用しない。",
+      "address": "",
+      "latitude": 35.6517147,
+      "longitude": 139.7919941,
+      "official_url": "https://www.gas-kagakukan.com/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.gas-kagakukan.com/",
+        "https://www.gas-kagakukan.com/news/detail/246"
+      ]
+    },
+    {
+      "id": "facility:ca9d7ae5cc580881",
+      "name": "東京国立近代美術館",
+      "short_name": "東京国立近代美術館",
+      "aliases": [],
+      "category": "美術館",
+      "categories": [
+        "美術館"
+      ],
+      "topics": [
+        "近現代美術",
+        "日本美術"
+      ],
+      "legal_categories": [
+        "designated_facility"
+      ],
+      "operational_status": "active",
+      "operational_status_label": "開館中",
+      "visit_state": "open_today",
+      "visit_state_label": "本日開館予定",
+      "schedule_summary": "10:00〜17:00、金・土曜は20:00まで。入館は閉館30分前まで。月曜（祝休日は開館し翌平日）・展示替期間・年末年始休館。企画展の個別時間を優先。",
+      "schedule_applicability": "current_baseline",
+      "reservation": "not_required",
+      "status_note": "公式トップで2026年9月29日〜2027年1月11日の所蔵作品展と10月23日開始の企画展を開催中と確認。10月22日の臨時休館告知は終了済み。",
+      "address": "東京都千代田区1丁目3-1",
+      "latitude": 35.6904946,
+      "longitude": 139.7546203,
+      "official_url": "https://www.momat.go.jp/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.momat.go.jp/",
+        "https://www.momat.go.jp/access",
+        "https://www.momat.go.jp/events/20260929"
+      ]
+    },
+    {
+      "id": "facility:e838c922e838d3e7",
+      "name": "東京大学総合研究博物館・小石川分館",
+      "short_name": "東京大学総合研究博物館・小石川分館",
+      "aliases": [],
+      "category": "博物館",
+      "categories": [
+        "博物館"
+      ],
+      "topics": [
+        "建築"
+      ],
+      "legal_categories": [],
+      "operational_status": "suspended",
+      "operational_status_label": "休止中",
+      "visit_state": "temporarily_closed",
+      "visit_state_label": "休止中",
+      "schedule_summary": "未確認",
+      "schedule_applicability": "unconfirmed",
+      "reservation": "unknown",
+      "status_note": "耐震性確保を確認できるまで休館。本郷本館とインターメディアテクには適用しない。",
+      "address": "",
+      "latitude": 35.7213986,
+      "longitude": 139.7411356,
+      "official_url": "https://www.um.u-tokyo.ac.jp/architectonica/index_jp.html",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.um.u-tokyo.ac.jp/architectonica/closure_en.html"
+      ]
+    },
+    {
+      "id": "facility:9a60867adc17aa44",
+      "name": "民音音楽博物館",
+      "short_name": "民音音楽博物館",
+      "aliases": [],
+      "category": "博物館",
+      "categories": [
+        "博物館"
+      ],
+      "topics": [
+        "音楽・楽器"
+      ],
+      "legal_categories": [
+        "registered_museum"
+      ],
+      "operational_status": "suspended",
+      "operational_status_label": "休止中",
+      "visit_state": "temporarily_closed",
+      "visit_state_label": "休止中",
+      "schedule_summary": "平日・土曜11:00–16:00、日曜・祝日10:00–17:00。月曜休館（祝日は開館し翌平日休館）、年末・展示替え等。工事休館を優先。",
+      "schedule_applicability": "suspended_baseline",
+      "reservation": "not_required_for_exhibitions",
+      "status_note": "本館展示ルームは設備工事で休館。音楽ライブラリーの利用時間を展示見学時間へ転用しない。",
+      "address": "東京都新宿区信濃町8",
+      "latitude": 35.6823264,
+      "longitude": 139.7193832,
+      "official_url": "https://museum.min-on.or.jp/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://museum.min-on.or.jp/guide/east/"
+      ]
+    },
+    {
+      "id": "facility:34552bd04d789375",
+      "name": "泉屋博古館東京",
+      "short_name": "泉屋博古館東京",
+      "aliases": [],
+      "category": "美術館",
+      "categories": [
+        "美術館"
+      ],
+      "topics": [],
+      "legal_categories": [
+        "registered_museum"
+      ],
+      "operational_status": "unknown",
+      "operational_status_label": "現況未確認",
+      "visit_state": "between_exhibitions",
+      "visit_state_label": "展示替え休館",
+      "schedule_summary": "未確認",
+      "schedule_applicability": "unconfirmed",
+      "reservation": "unknown",
+      "status_note": "11月1日は展示替え休館。次回展11月3日開始予定。恒久閉館や長期の運営休止とは区別し当日見学条件へ記録。",
+      "address": "六本木一丁目5-1",
+      "latitude": 35.665033,
+      "longitude": 139.741068,
+      "official_url": "https://sen-oku.or.jp/tokyo/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://sen-oku.or.jp/tokyo/"
+      ]
+    },
+    {
+      "id": "facility:f049c3c7d2c32e79",
+      "name": "町田市民文学館ことばらんど",
+      "short_name": "町田市民文学館ことばらんど",
+      "aliases": [],
+      "category": "博物館",
+      "categories": [
+        "博物館"
+      ],
+      "topics": [
+        "文学"
+      ],
+      "legal_categories": [],
+      "operational_status": "suspended",
+      "operational_status_label": "休止中",
+      "visit_state": "temporarily_closed",
+      "visit_state_label": "休止中",
+      "schedule_summary": "未確認",
+      "schedule_applicability": "unconfirmed",
+      "reservation": "unknown",
+      "status_note": "大規模改修休館。休館中の館外イベントを館内展示公開と扱わない。",
+      "address": "",
+      "latitude": 35.5425627,
+      "longitude": 139.4515503,
+      "official_url": "https://www.city.machida.tokyo.jp/bunka/bunka_geijutsu/cul/cul08Literature/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.city.machida.tokyo.jp/bunka/bunka_geijutsu/cul/cul08Literature/"
+      ]
+    },
+    {
+      "id": "facility:abfcb18939ac65eb",
+      "name": "白根記念渋谷区郷土博物館",
+      "short_name": "白根記念渋谷区郷土博物館",
+      "aliases": [
+        "白根記念渋谷区郷土博物館・文学館"
+      ],
+      "category": "博物館",
+      "categories": [
+        "博物館"
+      ],
+      "topics": [
+        "郷土・歴史",
+        "文学"
+      ],
+      "legal_categories": [
+        "similar_museum_facility"
+      ],
+      "operational_status": "suspended",
+      "operational_status_label": "休止中",
+      "visit_state": "temporarily_closed",
+      "visit_state_label": "休止中",
+      "schedule_summary": "通常9:00–17:00、最終入館16:30。月曜休館（休日の場合は直後の平日）、年末年始。現在の全館休館を優先。",
+      "schedule_applicability": "suspended_baseline",
+      "reservation": "unknown",
+      "status_note": "総合改修による全館休館。2027年3月再開予定、変更の可能性あり。",
+      "address": "",
+      "latitude": 35.6564391,
+      "longitude": 139.712542,
+      "official_url": "https://shibuya-muse.jp/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://shibuya-muse.jp/"
+      ]
+    },
+    {
+      "id": "facility:e53201ff85b2c268",
+      "name": "皇居三の丸尚蔵館",
+      "short_name": "皇居三の丸尚蔵館",
+      "aliases": [],
+      "category": "美術館",
+      "categories": [
+        "美術館"
+      ],
+      "topics": [
+        "皇室・文化財"
+      ],
+      "legal_categories": [
+        "designated_facility"
+      ],
+      "operational_status": "suspended",
+      "operational_status_label": "休止中",
+      "visit_state": "temporarily_closed",
+      "visit_state_label": "休止中",
+      "schedule_summary": "全面開館後の通常案内9:30–17:00、最終入館16:30。月曜休館（祝休日の場合は開館し翌平日休館）、年末年始・天皇誕生日・展示替え等。金曜は大手門からのみ入門。",
+      "schedule_applicability": "planned_after_reopening",
+      "reservation": "ticket_conditions_require_check",
+      "status_note": "11月1日の公式カレンダーは臨時休館。11月3日全面開館の公式発表あり。予定日到来だけで再開確認済みへ自動変更しない。",
+      "address": "",
+      "latitude": 35.6865373,
+      "longitude": 139.7589461,
+      "official_url": "https://shozokan.nich.go.jp/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://shozokan.nich.go.jp/visit/calendar",
+        "https://shozokan.nich.go.jp/news/260904"
+      ]
+    },
+    {
+      "id": "facility:97c3031a8f27b4c0",
+      "name": "紙の博物館",
+      "short_name": "紙の博物館",
+      "aliases": [],
+      "category": "博物館",
+      "categories": [
+        "博物館"
+      ],
+      "topics": [
+        "産業・紙"
+      ],
+      "legal_categories": [
+        "registered_museum"
+      ],
+      "operational_status": "active",
+      "operational_status_label": "開館中",
+      "visit_state": "open_today",
+      "visit_state_label": "本日開館予定",
+      "schedule_summary": "10:00–17:00、最終入館16:30。月曜（祝日は開館）・祝日直後の平日・年末年始・臨時休館日休館。",
+      "schedule_applicability": "current_baseline",
+      "reservation": "unknown",
+      "status_note": "2026年10月3日からの開館再開を公式告知で確認。過去の臨時休館告知より再開情報を優先。",
+      "address": "東京都北区王子一丁目1-3",
+      "latitude": 35.7498751,
+      "longitude": 139.7386812,
+      "official_url": "https://papermuseum.jp/ja/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://papermuseum.jp/ja/"
+      ]
+    },
+    {
+      "id": "facility:df93c8a3e369cd92",
+      "name": "西田小学校郷土資料展示室",
+      "short_name": "西田小学校郷土資料展示室",
+      "aliases": [],
+      "category": "展示室",
+      "categories": [
+        "展示室"
+      ],
+      "topics": [
+        "郷土・歴史",
+        "昭和の暮らし"
+      ],
+      "legal_categories": [],
+      "operational_status": "unknown",
+      "operational_status_label": "現況未確認",
+      "visit_state": "unconfirmed",
+      "visit_state_label": "要確認",
+      "schedule_summary": "旧資料では土日祝（学校行事による開校日を除く）と春夏冬休み期間の9:00〜17:00。第2・第4月曜、12/31〜1/3を除く。現行条件としては未確認。",
+      "schedule_applicability": "historical_reference_only",
+      "reservation": "unknown",
+      "status_note": "杉並区の旧年度資料で展示内容と公開条件は確認できるが、現行専用案内・直近の開室実績を確認できず、現在の運営状態には転用しない。",
+      "address": "",
+      "latitude": 35.6947346,
+      "longitude": 139.6215769,
+      "official_url": "",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.city.suginami.tokyo.jp/documents/5703/shiryo12.pdf",
+        "https://www.city.suginami.tokyo.jp/documents/1334/chouzyumyoukahosin04.pdf"
+      ]
+    },
+    {
+      "id": "facility:c67a2af55b461fbd",
+      "name": "講談社野間記念館",
+      "short_name": "講談社野間記念館",
+      "aliases": [],
+      "category": "美術館",
+      "categories": [
+        "美術館"
+      ],
+      "topics": [],
+      "legal_categories": [],
+      "operational_status": "suspended",
+      "operational_status_label": "休止中",
+      "visit_state": "temporarily_closed",
+      "visit_state_label": "休止中",
+      "schedule_summary": "未確認",
+      "schedule_applicability": "unconfirmed",
+      "reservation": "unknown",
+      "status_note": "リニューアルに向け休館中。再開日未定。",
+      "address": "東京都文京区関口二丁目11-30",
+      "latitude": 35.714018,
+      "longitude": 139.725033,
+      "official_url": "https://www.nomamuseum.kodansha.co.jp/",
+      "checked_on": "2026-11-01",
+      "evidence_urls": [
+        "https://www.nomamuseum.kodansha.co.jp/"
+      ]
+    }
+  ]
+}
+
