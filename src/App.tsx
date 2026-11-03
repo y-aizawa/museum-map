@@ -678,7 +678,8 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, onSelect, onBoun
       const bottom = compact ? 85 : 45
       popup.getElement().classList.toggle('mobile-facility-popup', compact)
       if (compact) {
-        popupContent.style.maxHeight = `${Math.max(80, Math.min(height * .62, height - top - bottom))}px`
+        const visibleHeight = Math.min(height, window.visualViewport?.height ?? window.innerHeight)
+        popupContent.style.maxHeight = `${Math.max(80, Math.min(420, visibleHeight * .48, visibleHeight - top - 24))}px`
         return
       }
       const point = map.project([facility.longitude, facility.latitude])
@@ -710,6 +711,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, onSelect, onBoun
     observer.observe(popupContent)
     map.on('move', fitPopup)
     map.on('resize', fitPopup)
+    window.visualViewport?.addEventListener('resize', fitPopup)
     popup.on('close', () => {
       if (popupRef.current !== popup) return
       popupRef.current = null
@@ -720,6 +722,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, onSelect, onBoun
       observer.disconnect()
       map.off('move', fitPopup)
       map.off('resize', fitPopup)
+      window.visualViewport?.removeEventListener('resize', fitPopup)
     }
   }, [selectedId, temporaryId, items, onSelect])
 
@@ -1007,7 +1010,7 @@ function App() {
       </div>}
 
       {effectiveListOpen && !filterOpen && <FacilityList items={listItems} selectedId={selectedId} stale={boundsStale} mobile={mobile} sheetLevel={sheetLevel} exhibitionFilter={filters.exhibition} onSheetLevel={level => { setSheetLevel(level); if (level > 0) setSelectedId(null); if (!listBounds) setListBounds(liveBoundsRef.current) }} onRefresh={() => setListBounds(liveBoundsRef.current)} onReset={initialReset} onClose={() => setListOpen(false)} onSelect={selectFromList} />}
-      {mobile && !filterOpen && sheetLevel === 0 && <Button className="mobile-list-peek" onClick={openList}><span /><div>この範囲の施設 <b>{currentRangeCount}</b></div><Icon name="chevron" size={16} /></Button>}
+      {mobile && !selectedId && !filterOpen && sheetLevel === 0 && <Button className="mobile-list-peek" onClick={openList}><span /><div>この範囲の施設 <b>{currentRangeCount}</b></div><Icon name="chevron" size={16} /></Button>}
 
       {filterOpen && <FilterPanel draft={draft} onChange={setDraft} onClose={() => setFilterOpen(false)} onApply={applyFilters} />}
       {filtered.length === 0 && !filterOpen && <div className="zero-state"><strong>この範囲には条件に一致する施設がありません</strong><Button onClick={initialReset}>初期条件に戻す</Button></div>}
