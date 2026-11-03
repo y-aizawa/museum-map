@@ -659,20 +659,43 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, onSelect, onBoun
       value.getElement().classList.toggle('selected', active)
       value.getElement().querySelector('.museum-pin')?.classList.toggle('selected', active)
     })
-    map.easeTo({ center: [facility.longitude, facility.latitude], duration: 450 })
     const previousPopup = popupRef.current
     popupRef.current = null
     previousPopup?.remove()
-    const popup = new Popup({ closeButton: true, closeOnClick: true, offset: 28, maxWidth: '410px', focusAfterOpen: true })
+    const popupContent = buildPopup(facility, temporaryId === facility.id)
+    const popup = new Popup({ anchor: 'bottom', closeButton: true, closeOnClick: true, offset: 28, maxWidth: '410px', focusAfterOpen: false })
       .setLngLat([facility.longitude, facility.latitude])
-      .setDOMContent(buildPopup(facility, temporaryId === facility.id))
+      .setDOMContent(popupContent)
       .addTo(map)
     popupRef.current = popup
+    // Keep the whole bubble below the toolbar and above the bottom controls.
+    // Centering the pin alone can leave a tall popup outside the viewport.
+    const fitPopup = () => {
+      if (popupRef.current !== popup) return
+      const bounds = map.getContainer().getBoundingClientRect()
+      const top = bounds.top + (window.innerWidth <= 760 ? 125 : 105)
+      const bottom = bounds.bottom - (window.innerWidth <= 760 ? 85 : 45)
+      popupContent.style.maxHeight = `${Math.max(80, Math.min(520, bottom - top - 20))}px`
+      const bubble = popup.getElement().getBoundingClientRect()
+      const left = bounds.left + 16
+      const right = bounds.right - 60
+      const dx = bubble.left < left ? bubble.left - left : bubble.right > right ? bubble.right - right : 0
+      const dy = bubble.top < top ? bubble.top - top : bubble.bottom > bottom ? bubble.bottom - bottom : 0
+      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) map.panBy([dx, dy], { duration: 0 })
+    }
+    map.stop()
+    const frame = requestAnimationFrame(fitPopup)
+    const observer = new ResizeObserver(fitPopup)
+    observer.observe(popupContent)
     popup.on('close', () => {
       if (popupRef.current !== popup) return
       popupRef.current = null
       onSelect(null)
     })
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
   }, [selectedId, temporaryId, items, onSelect])
 
   useEffect(() => {
