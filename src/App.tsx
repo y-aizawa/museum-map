@@ -834,10 +834,11 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
   )
 }
 
-function FacilityList({ items, selectedId, selectedFacility, outsideFilters, onBack, onDetailClose, stale, mobile, sheetLevel, exhibitionFilter, onSheetLevel, onRefresh, onReset, onClose, onSelect }: {
+function FacilityList({ items, selectedId, selectedFacility, canGoBack, outsideFilters, onBack, onDetailClose, stale, mobile, sheetLevel, exhibitionFilter, onSheetLevel, onRefresh, onReset, onClose, onSelect }: {
   items: Facility[]
   selectedId: string | null
   selectedFacility?: Facility
+  canGoBack: boolean
   outsideFilters: boolean
   onBack: () => void
   onDetailClose: () => void
@@ -881,7 +882,7 @@ function FacilityList({ items, selectedId, selectedFacility, outsideFilters, onB
         event.currentTarget.setPointerCapture(event.pointerId)
       }} onPointerUp={onPointerUp} onPointerCancel={() => { dragStart.current = null }}>
         {mobile && <span className="sheet-grip" />}
-        {showDetail ? <><Button className="sheet-back" onClick={onBack}>‹ 一覧に戻る</Button><Button onClick={onDetailClose} aria-label="施設情報を閉じる"><Icon name="close" /></Button></> : <><div><small>地図の表示範囲</small><h2>この範囲の施設 <b>{items.length}</b></h2></div>
+        {showDetail ? <>{canGoBack ? <Button className="sheet-back" onClick={onBack}>‹ 一覧に戻る</Button> : <span aria-hidden="true" />}<Button onClick={onDetailClose} aria-label="施設情報を閉じる"><Icon name="close" /></Button></> : <><div><small>地図の表示範囲</small><h2>この範囲の施設 <b>{items.length}</b></h2></div>
         {!mobile && <Button onClick={onClose} aria-label="一覧を閉じる"><Icon name="close" /></Button>}
         {mobile && <Button className="list-collapse" onClick={() => onSheetLevel(0)} aria-label="一覧を折りたたむ"><Icon name="chevron" /></Button>}</>}
       </header>
@@ -905,6 +906,7 @@ function App() {
   const [sheetLevel, setSheetLevel] = useState<SheetLevel>(0)
   const previousListLevel = useRef<SheetLevel>(1)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectionOrigin, setSelectionOrigin] = useState<'map' | 'list' | 'search'>('map')
   const [temporaryId, setTemporaryId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [suggestionsOpen, setSuggestionsOpen] = useState(false)
@@ -937,6 +939,7 @@ function App() {
     setLiveBounds(bounds)
   }, [])
   const handleSelect = useCallback((facility: Facility | null) => {
+    setSelectionOrigin('map')
     setSelectedId(facility?.id || null)
     if (mobile) {
       if (facility) previousListLevel.current = 1
@@ -960,11 +963,13 @@ function App() {
     }
   }
   const selectFromList = (facility: Facility) => {
+    setSelectionOrigin('list')
     previousListLevel.current = sheetLevel || 1
     setTemporaryId(null)
     setSelectedId(facility.id)
   }
   const selectSearch = (facility: Facility) => {
+    setSelectionOrigin('search')
     setQuery(facility.name)
     setSuggestionsOpen(false)
     setTemporaryId(matchesFilters(facility, filters) ? null : facility.id)
@@ -1035,7 +1040,7 @@ function App() {
         ))}</div>}
       </div>}
 
-      {effectiveListOpen && !filterOpen && <FacilityList items={listItems} selectedId={selectedId} selectedFacility={mobile ? facilities.find(item => item.id === selectedId) : undefined} outsideFilters={Boolean(temporaryId && temporaryId === selectedId)} onBack={() => { setSelectedId(null); setSheetLevel(previousListLevel.current); if (!listBounds) setListBounds(liveBoundsRef.current) }} onDetailClose={() => { setSelectedId(null); setSheetLevel(0) }} stale={boundsStale} mobile={mobile} sheetLevel={sheetLevel} exhibitionFilter={filters.exhibition} onSheetLevel={level => { setSheetLevel(level); if (level === 0) setSelectedId(null); if (!listBounds) setListBounds(liveBoundsRef.current) }} onRefresh={() => setListBounds(liveBoundsRef.current)} onReset={initialReset} onClose={() => setListOpen(false)} onSelect={selectFromList} />}
+      {effectiveListOpen && !filterOpen && <FacilityList items={listItems} selectedId={selectedId} selectedFacility={mobile ? facilities.find(item => item.id === selectedId) : undefined} canGoBack={selectionOrigin === 'list'} outsideFilters={Boolean(temporaryId && temporaryId === selectedId)} onBack={() => { setSelectedId(null); setSheetLevel(previousListLevel.current); if (!listBounds) setListBounds(liveBoundsRef.current) }} onDetailClose={() => { setSelectedId(null); setSheetLevel(0) }} stale={boundsStale} mobile={mobile} sheetLevel={sheetLevel} exhibitionFilter={filters.exhibition} onSheetLevel={level => { setSheetLevel(level); if (level === 0) setSelectedId(null); if (!listBounds) setListBounds(liveBoundsRef.current) }} onRefresh={() => setListBounds(liveBoundsRef.current)} onReset={initialReset} onClose={() => setListOpen(false)} onSelect={selectFromList} />}
       {mobile && !selectedId && !filterOpen && sheetLevel === 0 && <Button className="mobile-list-peek" onClick={openList}><span /><div>この範囲の施設 <b>{currentRangeCount}</b></div><Icon name="chevron" size={16} /></Button>}
 
       {filterOpen && <FilterPanel draft={draft} onChange={setDraft} onClose={() => setFilterOpen(false)} onApply={applyFilters} />}
