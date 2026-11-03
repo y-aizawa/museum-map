@@ -433,6 +433,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
       .sort((left, right) => Number(right.phase === '開催中') - Number(left.phase === '開催中') || left.index - right.index)
       .forEach(({ exhibition, phase }) => {
       const item = document.createElement('div')
+      item.className = phase === '開催予定' ? 'exhibition-upcoming' : 'exhibition-ongoing'
       const state = document.createElement('em')
       state.textContent = phase || '特別展'
       if (exhibition.is_sample) {
@@ -806,7 +807,8 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
   onSelect: () => void
 }) {
   const exhibitions = [...(facility.special_exhibitions || [])].sort((left, right) =>
-    Number(exhibitionPhase(right) === '開催中') - Number(exhibitionPhase(left) === '開催中'))
+    Number(exhibitionPhase(right) === '開催中') - Number(exhibitionPhase(left) === '開催中')
+    || (left.start_date || '').localeCompare(right.start_date || ''))
   const schedule = scheduleDisplay(facility)
   const notice = publicNotice(facility)
   const tags = conditionTags(facility)
@@ -822,7 +824,7 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
       </div>
       {tags.length > 0 && <div className="list-condition-tags">{tags.map(value => <span key={value}>{value}</span>)}</div>}
       {notice && <div className={`list-notice ${facility.operational_status}`}>{notice}</div>}
-      {exhibitions.map(item => <div className={`card-exhibition ${exhibitionFilter !== 'any' ? 'featured' : ''}`} key={item.title}><em>{exhibitionPhase(item) || '特別展'}{item.is_sample && <small>サンプル</small>}</em><b>{item.title}</b><span>会期：{formatExhibitionPeriod(item)}</span></div>)}
+      {exhibitions.map(item => <div className={`card-exhibition ${exhibitionPhase(item) === '開催予定' ? 'exhibition-upcoming' : 'exhibition-ongoing'} ${exhibitionFilter !== 'any' ? 'featured' : ''}`} key={item.title}><em>{exhibitionPhase(item) || '特別展'}{item.is_sample && <small>サンプル</small>}</em><b>{item.title}</b><span>会期：{formatExhibitionPeriod(item)}</span></div>)}
     </article>
   )
 }

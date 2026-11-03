@@ -183,6 +183,13 @@ button, input { font: inherit; }
 .card-exhibition b { margin-top: 3px; font-size: 12px; line-height: 1.45; }
 .card-exhibition span { margin-top: 2px; color: var(--muted); font-size: 9px; }
 .card-exhibition.featured b { color: var(--brand-dark); }
+.popup-exhibitions > .exhibition-ongoing em { color: #88415f; }
+.popup-exhibitions > .exhibition-upcoming { background: #eff4f7; border-left-color: #627f94; }
+.popup-exhibitions > .exhibition-upcoming em { color: #46657c; }
+.card-exhibition { padding: 8px 10px; border-radius: 8px; border-left: 3px solid #a14f73; background: #faf5ed; }
+.card-exhibition.exhibition-ongoing em { color: #88415f; background: transparent; }
+.card-exhibition.exhibition-upcoming { background: #eff4f7; border-left-color: #627f94; }
+.card-exhibition.exhibition-upcoming em { color: #46657c; background: transparent; }
 .list-empty { padding: 60px 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--muted); text-align: center; }
 .list-empty strong { max-width: 240px; font-size: 11px; line-height: 1.6; }
 .list-empty button { padding: 8px 11px; border: 1px solid var(--brand); border-radius: 7px; color: var(--brand); background: white; font-size: 9px; font-weight: 700; }
