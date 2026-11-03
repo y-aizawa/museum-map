@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AttributionControl, GeolocateControl, LngLatBounds, Map as MapLibreMap, Marker, NavigationControl, Popup, setWorkerUrl } from 'maplibre-gl'
+import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, NavigationControl, Popup, setWorkerUrl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import dataset from './data/museums.json'
 import { SAMPLE_EXHIBITIONS_BY_FACILITY, SHOW_SAMPLE_EXHIBITIONS } from './data/sampleExhibitions'
@@ -73,10 +73,6 @@ function distanceKm(left: Coordinate, right: Coordinate) {
     + Math.cos(radians(left.latitude)) * Math.cos(radians(right.latitude))
     * Math.sin(radians(right.longitude - left.longitude) / 2) ** 2
   return 6371 * 2 * Math.asin(Math.sqrt(Math.min(1, a)))
-}
-
-function formatDistance(distance: number) {
-  return distance < 1 ? `約${Math.round(distance * 1000 / 10) * 10}m` : `約${distance.toFixed(1)}km`
 }
 
 type BoundsValue = { west: number; south: number; east: number; north: number; center: Coordinate }
@@ -493,16 +489,13 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   return root
 }
 
-function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect, onBounds, onErrorChange, onLocation, onExplore, onLocationFocus }: {
+function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect, onBounds, onErrorChange }: {
   items: Facility[]
   selectedId: string | null
   temporaryId: string | null
   layoutKey: string
   mobile: boolean
   onSelect: (facility: Facility | null) => void
-  onLocation: (location: Coordinate | null) => void
-  onLocationFocus: () => void
-  onExplore: () => void
   onBounds: (bounds: BoundsValue) => void
   onErrorChange: (error: boolean) => void
 }) {
@@ -510,7 +503,6 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef(new Map<string, Marker>())
   const popupRef = useRef<Popup | null>(null)
-  const [locationError, setLocationError] = useState('')
   const [retry, setRetry] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -543,37 +535,12 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect
       pitchWithRotate: false,
       localIdeographFontFamily: "'Noto Sans JP', sans-serif",
       attributionControl: false,
-      locale: {
-        'GeolocateControl.FindMyLocation': '現在地を表示',
-        'GeolocateControl.LocationNotAvailable': '現在地を利用できません。端末・ブラウザの位置情報設定をご確認ください',
-      },
     })
     map.dragRotate.disable()
     map.touchPitch.disable()
     map.touchZoomRotate.disableRotation()
     map.keyboard.disableRotation()
     map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right')
-    const geolocate = new GeolocateControl({
-      positionOptions: { enableHighAccuracy: true, timeout: 15000 },
-      trackUserLocation: true,
-      showAccuracyCircle: true,
-      fitBoundsOptions: { maxZoom: 14 },
-    })
-    map.addControl(geolocate, 'top-right')
-    geolocate.on('geolocate', event => {
-      setLocationError('')
-      onLocation({ latitude: event.coords.latitude, longitude: event.coords.longitude })
-    })
-    geolocate.on('trackuserlocationstart', () => { setLocationError(''); onLocationFocus() })
-    geolocate.on('trackuserlocationend', onExplore)
-    geolocate.on('error', event => {
-      onLocation(null)
-      setLocationError(event.code === 1
-        ? '位置情報が許可されていません。地図の中心から近い順で表示します。'
-        : '現在地を取得できませんでした。端末の位置情報と通信状態をご確認ください。')
-    })
-    map.on('dragstart', onExplore)
-
     map.addControl(new AttributionControl({ compact: true, customAttribution: `<a href="${import.meta.env.BASE_URL}sources.html" target="_blank" rel="noopener noreferrer">施設データの出典</a>` }), 'bottom-left')
     mapRef.current = map
     let styleReady = false
@@ -651,7 +618,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect
       map.remove()
       mapRef.current = null
     }
-  }, [retry, onSelect, onErrorChange, publishBounds, onLocation, onExplore, onLocationFocus])
+  }, [retry, onSelect, onErrorChange, publishBounds])
 
   useEffect(() => {
     const map = mapRef.current
@@ -777,7 +744,6 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect
 
   return (
     <div className="map-canvas">
-      {locationError && <div className="location-message" role="status">{locationError}<button onClick={() => setLocationError('')} aria-label="案内を閉じる">×</button></div>}
       <div ref={containerRef} className="map-surface" aria-label="東京のミュージアム地図" />
       {loading && <div className="map-loading"><span />地図を読み込んでいます</div>}
       {error && (
@@ -848,9 +814,8 @@ function FilterPanel({ draft, onChange, onClose, onApply }: {
   )
 }
 
-function FacilityCard({ facility, selected, exhibitionFilter, distance, onSelect }: {
+function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
   facility: Facility
-  distance: number
   selected: boolean
   exhibitionFilter: ExhibitionFilter
   onSelect: () => void
@@ -869,7 +834,7 @@ function FacilityCard({ facility, selected, exhibitionFilter, distance, onSelect
     }}>
       {facility.image_url && <img src={facility.image_url} alt="" />}
       <h3><button className="list-card-title" onClick={onSelect} aria-pressed={selected}>{facility.name}</button><span className="list-card-arrow" aria-hidden="true">›</span></h3>
-      <div className="list-card-meta"><span className={`category-symbol category-${getCategoryGroup(facility)}`}>{categorySymbols[getCategoryGroup(facility)]}</span><span>{formatDistance(distance)} · {categories}{facility.address ? ` · ${facility.address}` : ''}</span></div>
+      <div className="list-card-meta"><span className={`category-symbol category-${getCategoryGroup(facility)}`}>{categorySymbols[getCategoryGroup(facility)]}</span><span>{categories}{facility.address ? ` · ${facility.address}` : ''}</span></div>
       <div className="list-schedule">
         <div><span>本日</span><p>{facility.operational_status === 'closed' ? '閉館しました' : facility.operational_status === 'suspended' ? '休館中' : schedule.today !== '—' ? schedule.today : '公式サイトでご確認ください'}</p></div>
       </div>
@@ -880,10 +845,8 @@ function FacilityCard({ facility, selected, exhibitionFilter, distance, onSelect
   )
 }
 
-function FacilityList({ items, distanceOrigin, sortLabel, selectedId, selectedFacility, canGoBack, outsideFilters, onBack, onDetailClose, stale, mobile, sheetLevel, exhibitionFilter, onSheetLevel, onRefresh, onReset, onClose, onSelect }: {
+function FacilityList({ items, selectedId, selectedFacility, canGoBack, outsideFilters, onBack, onDetailClose, stale, mobile, sheetLevel, exhibitionFilter, onSheetLevel, onRefresh, onReset, onClose, onSelect }: {
   items: Facility[]
-  distanceOrigin: Coordinate
-  sortLabel: string
   selectedId: string | null
   selectedFacility?: Facility
   canGoBack: boolean
@@ -930,13 +893,13 @@ function FacilityList({ items, distanceOrigin, sortLabel, selectedId, selectedFa
         event.currentTarget.setPointerCapture(event.pointerId)
       }} onPointerUp={onPointerUp} onPointerCancel={() => { dragStart.current = null }}>
         {mobile && <span className="sheet-grip" />}
-        {showDetail ? <>{canGoBack ? <Button className="sheet-back" onClick={onBack}>‹ 一覧に戻る</Button> : <span aria-hidden="true" />}<Button onClick={onDetailClose} aria-label="施設情報を閉じる"><Icon name="close" /></Button></> : <><div><small>{sortLabel}（直線距離）</small><h2>この範囲の施設 <b>{items.length}</b></h2></div>
+        {showDetail ? <>{canGoBack ? <Button className="sheet-back" onClick={onBack}>‹ 一覧に戻る</Button> : <span aria-hidden="true" />}<Button onClick={onDetailClose} aria-label="施設情報を閉じる"><Icon name="close" /></Button></> : <><div><small>地図の中央から近い順</small><h2>この範囲の施設 <b>{items.length}</b></h2></div>
         {!mobile && <Button onClick={onClose} aria-label="一覧を閉じる"><Icon name="close" /></Button>}
         {mobile && <Button className="list-collapse" onClick={() => onSheetLevel(0)} aria-label="一覧を折りたたむ"><Icon name="chevron" /></Button>}</>}
       </header>
       {stale && !showDetail && <Button className="refresh-area" onClick={onRefresh}><Icon name="refresh" size={16} />この範囲で一覧を更新</Button>}
       <div className="list-scroll" ref={listScroll} style={showDetail ? { display: 'none' } : undefined} onScroll={event => { if (!showDetail) savedScroll.current = event.currentTarget.scrollTop }}>
-        {items.length ? items.map(facility => <FacilityCard key={facility.id} facility={facility} distance={distanceKm(distanceOrigin, facility)} selected={selectedId === facility.id} exhibitionFilter={exhibitionFilter} onSelect={() => onSelect(facility)} />) : (
+        {items.length ? items.map(facility => <FacilityCard key={facility.id} facility={facility} selected={selectedId === facility.id} exhibitionFilter={exhibitionFilter} onSelect={() => onSelect(facility)} />) : (
           <div className="list-empty"><Icon name="info" size={25} /><strong>この範囲には条件に一致する施設がありません</strong><Button onClick={onReset}>初期条件に戻す</Button></div>
         )}
       </div>
@@ -963,15 +926,6 @@ function App() {
   const [listBounds, setListBounds] = useState<BoundsValue | null>(null)
   const [legendOpen, setLegendOpen] = useState(false)
   const [mapError, setMapError] = useState(false)
-  const [userLocation, setUserLocation] = useState<Coordinate | null>(null)
-  const [sortFromLocation, setSortFromLocation] = useState(false)
-  const handleLocation = useCallback((location: Coordinate | null) => {
-    setUserLocation(location)
-    // Background position updates must not pull the list back from an explored area.
-    if (!location) setSortFromLocation(false)
-  }, [])
-  const handleExplore = useCallback(() => setSortFromLocation(false), [])
-  const handleLocationFocus = useCallback(() => setSortFromLocation(true), [])
 
   const filtered = useMemo(() => facilities.filter(item => matchesFilters(item, filters)), [filters])
   const visible = useMemo(() => {
@@ -980,12 +934,10 @@ function App() {
     return temporary ? [...filtered, temporary] : filtered
   }, [filtered, temporaryId])
   const distanceOrigin = useMemo<Coordinate>(() => {
-    if (sortFromLocation && userLocation) return userLocation
     const bounds = listBounds || liveBounds
     return bounds ? bounds.center
       : { latitude: 35.68, longitude: 139.63 }
-  }, [sortFromLocation, userLocation, listBounds, liveBounds])
-  const sortLabel = sortFromLocation && userLocation ? '現在地から近い順' : '地図の中心から近い順'
+  }, [listBounds, liveBounds])
   const listItems = useMemo(() => filtered.filter(item => isInBounds(item, listBounds))
     .sort((left, right) => distanceKm(distanceOrigin, left) - distanceKm(distanceOrigin, right)
       || left.name.localeCompare(right.name, 'ja')), [filtered, listBounds, distanceOrigin])
@@ -1096,7 +1048,7 @@ function App() {
       {activeChips.length > 0 && <div className="active-chips">{activeChips.map(chip => <Button key={chip.key} onClick={chip.remove}>{chip.label}<Icon name="close" size={12} /></Button>)}</div>}
 
       <section className="map-area">
-        <MapCanvas items={visible} selectedId={filterOpen ? null : selectedId} temporaryId={temporaryId} layoutKey={layoutKey} mobile={mobile} onSelect={handleSelect} onBounds={handleBounds} onErrorChange={handleMapError} onLocation={handleLocation} onExplore={handleExplore} onLocationFocus={handleLocationFocus} />
+        <MapCanvas items={visible} selectedId={filterOpen ? null : selectedId} temporaryId={temporaryId} layoutKey={layoutKey} mobile={mobile} onSelect={handleSelect} onBounds={handleBounds} onErrorChange={handleMapError} />
       </section>
 
       {!mapError && <div className={`map-legend ${legendOpen ? 'open' : ''}`}>
@@ -1106,7 +1058,7 @@ function App() {
         ))}</div>}
       </div>}
 
-      {effectiveListOpen && !filterOpen && <FacilityList items={listItems} distanceOrigin={distanceOrigin} sortLabel={sortLabel} selectedId={selectedId} selectedFacility={mobile ? facilities.find(item => item.id === selectedId) : undefined} canGoBack={selectionOrigin === 'list'} outsideFilters={Boolean(temporaryId && temporaryId === selectedId)} onBack={() => { setSelectedId(null); setSheetLevel(previousListLevel.current); if (!listBounds) setListBounds(liveBoundsRef.current) }} onDetailClose={() => { setSelectedId(null); setSheetLevel(0) }} stale={boundsStale} mobile={mobile} sheetLevel={sheetLevel} exhibitionFilter={filters.exhibition} onSheetLevel={level => { setSheetLevel(level); if (level === 0) setSelectedId(null); if (!listBounds) setListBounds(liveBoundsRef.current) }} onRefresh={() => setListBounds(liveBoundsRef.current)} onReset={initialReset} onClose={() => setListOpen(false)} onSelect={selectFromList} />}
+      {effectiveListOpen && !filterOpen && <FacilityList items={listItems} selectedId={selectedId} selectedFacility={mobile ? facilities.find(item => item.id === selectedId) : undefined} canGoBack={selectionOrigin === 'list'} outsideFilters={Boolean(temporaryId && temporaryId === selectedId)} onBack={() => { setSelectedId(null); setSheetLevel(previousListLevel.current); if (!listBounds) setListBounds(liveBoundsRef.current) }} onDetailClose={() => { setSelectedId(null); setSheetLevel(0) }} stale={boundsStale} mobile={mobile} sheetLevel={sheetLevel} exhibitionFilter={filters.exhibition} onSheetLevel={level => { setSheetLevel(level); if (level === 0) setSelectedId(null); if (!listBounds) setListBounds(liveBoundsRef.current) }} onRefresh={() => setListBounds(liveBoundsRef.current)} onReset={initialReset} onClose={() => setListOpen(false)} onSelect={selectFromList} />}
       {mobile && !selectedId && !filterOpen && sheetLevel === 0 && <Button className="mobile-list-peek" onClick={openList}><span /><div>この範囲の施設 <b>{currentRangeCount}</b></div><Icon name="chevron" size={16} /></Button>}
 
       {filterOpen && <FilterPanel draft={draft} onChange={setDraft} onClose={() => setFilterOpen(false)} onApply={applyFilters} />}

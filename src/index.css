@@ -270,8 +270,3 @@ button, input { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
-
-/* Keep location access above the mobile list sheet. */
-.maplibregl-ctrl-top-right { top: 115px; right: 8px; }
-.location-message { position: absolute; z-index: 40; top: 120px; left: 16px; right: 64px; max-width: 360px; padding: 12px; border-radius: 10px; background: var(--surface, #fff); box-shadow: var(--shadow); font-size: 13px; }
-.location-message button { float: right; margin-left: 8px; border: 0; background: transparent; cursor: pointer; }
