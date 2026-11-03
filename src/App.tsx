@@ -24,6 +24,7 @@ type Exhibition = {
 
 type WeeklyScheduleRule = {
   days: string[]
+  weeks?: number[]
   open: string
   close: string
   last_admission?: string
@@ -142,6 +143,11 @@ function weeklyRuleTime(rule: WeeklyScheduleRule) {
   return `${rule.open}–${rule.close}${rule.last_admission ? `（最終入館 ${rule.last_admission}）` : ''}`
 }
 
+function weeklyDayLabel(rule: WeeklyScheduleRule, names: Record<string, string>) {
+  const days = rule.days.map(day => names[day] || day).join('・')
+  return rule.weeks?.length ? `第${rule.weeks.join('・')}${days}` : days
+}
+
 function datePlus(days: number) {
   const date = new Date(`${todayInTokyo()}T00:00:00+09:00`)
   date.setDate(date.getDate() + days)
@@ -204,8 +210,9 @@ function scheduleDisplay(facility: Facility): ScheduleDisplay {
   }
   if (structured?.weekly?.length && ['current_baseline', 'current_exhibition'].includes(facility.schedule_applicability)) {
     const days: Record<string, string> = { mo: '月', tu: '火', we: '水', th: '木', fr: '金', sa: '土', su: '日' }
-    const lines = structured.weekly.map(rule => `${rule.days.map(day => days[day] || day).join('・')} ${weeklyRuleTime(rule)}`)
-    const todayRules = structured.weekly.filter(rule => rule.days.includes(weekdayCodeInTokyo()))
+    const lines = structured.weekly.map(rule => `${weeklyDayLabel(rule, days)} ${weeklyRuleTime(rule)}`)
+    const week = Math.ceil(Number(date.slice(-2)) / 7)
+    const todayRules = structured.weekly.filter(rule => rule.days.includes(weekdayCodeInTokyo()) && (!rule.weeks?.length || rule.weeks.includes(week)))
     const today = todayRules.length ? todayRules.map(rule => `${rule.open}–${rule.close}`).join('／') : '通常休館日'
     const closed = facility.schedule_summary.split(/[。]/).filter(clause => /休館|休園|定休/.test(clause)).join('。')
     return { today, regular: lines.length <= 2 ? lines.join('／') : lines[0] + ' ほか', closed: closed || '—', details: [...lines, structured.holiday_rule || ''].filter(Boolean).join('\n') }
@@ -370,7 +377,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
     if (structured?.weekly?.length) {
       const dayNames: Record<string, string> = { mo: '月', tu: '火', we: '水', th: '木', fr: '金', sa: '土', su: '日' }
       structured.weekly.forEach(rule => {
-        addRow(rule.days.map(day => dayNames[day] || day).join('・'), `${rule.open}–${rule.close}`)
+        addRow(weeklyDayLabel(rule, dayNames), `${rule.open}–${rule.close}`)
         if (rule.last_admission) addRow('最終入館', rule.last_admission)
       })
       const closure = structured.holiday_rule || schedule.closed
