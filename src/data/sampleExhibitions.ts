@@ -6,7 +6,7 @@ export type SampleExhibition = {
   is_sample: true
 }
 
-export const SHOW_SAMPLE_EXHIBITIONS = true
+export const SHOW_SAMPLE_EXHIBITIONS = false
 
 const tokyoDate = (offsetDays: number) => {
   const now = new Date()
