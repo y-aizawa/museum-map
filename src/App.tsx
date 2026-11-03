@@ -669,13 +669,18 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, onSelect, onBoun
       .setDOMContent(popupContent)
       .addTo(map)
     popupRef.current = popup
-    // Desktop uses the space beside the pin; mobile keeps automatic anchors.
+    // Desktop uses the space beside the pin; mobile uses a stationary bottom card.
     const fitPopup = () => {
       if (popupRef.current !== popup) return
       const height = map.getContainer().clientHeight
       const compact = window.innerWidth <= 760
       const top = compact ? 125 : 105
       const bottom = compact ? 85 : 45
+      popup.getElement().classList.toggle('mobile-facility-popup', compact)
+      if (compact) {
+        popupContent.style.maxHeight = `${Math.max(80, Math.min(height * .62, height - top - bottom))}px`
+        return
+      }
       const point = map.project([facility.longitude, facility.latitude])
       const width = map.getContainer().clientWidth
       const bubbleWidth = popup.getElement().offsetWidth

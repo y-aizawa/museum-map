@@ -251,6 +251,13 @@ button, input { font: inherit; }
   .filter-panel > header { padding-top: 20px; }
   .filter-panel > footer { padding-bottom: calc(11px + env(safe-area-inset-bottom)); }
   .map-popup { width: min(280px,calc(100vw - 60px)); max-height: 58vh; overflow-y: auto; }
+  .maplibregl-popup.mobile-facility-popup {
+    left: 10px; right: 10px; top: auto; bottom: calc(76px + env(safe-area-inset-bottom));
+    width: auto; max-width: none !important; transform: none !important;
+  }
+  .mobile-facility-popup .maplibregl-popup-tip { display: none; }
+  .mobile-facility-popup .maplibregl-popup-content { width: 100%; max-height: none; border-radius: 18px; }
+  .mobile-facility-popup .map-popup { width: 100%; padding: 18px; overscroll-behavior: contain; }
   .desktop-list-open .map-area { left: 0; }
 }
 
