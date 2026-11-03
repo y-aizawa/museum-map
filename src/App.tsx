@@ -809,25 +809,27 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
   exhibitionFilter: ExhibitionFilter
   onSelect: () => void
 }) {
-  const exhibitions = [...(facility.special_exhibitions || [])].sort((left, right) =>
+  const exhibitions = (facility.special_exhibitions || [])
+    .filter(item => !item.end_date || item.end_date >= todayInTokyo())
+    .sort((left, right) =>
     Number(exhibitionPhase(right) === '開催中') - Number(exhibitionPhase(left) === '開催中')
     || (left.start_date || '').localeCompare(right.start_date || ''))
   const schedule = scheduleDisplay(facility)
   const notice = publicNotice(facility)
-  const tags = conditionTags(facility)
   const categories = displayCategories(facility).join('・')
   return (
-    <article className={`list-card ${selected ? 'selected' : ''}`} onClick={onSelect}>
+    <article className={`list-card ${selected ? 'selected' : ''}`} role="button" tabIndex={0} onClick={onSelect} onKeyDown={event => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect() }
+    }}>
       {facility.image_url && <img src={facility.image_url} alt="" />}
-      <h3>{facility.name}</h3>
+      <h3><span>{facility.name}</span><span className="list-card-arrow" aria-hidden="true">›</span></h3>
       <div className="list-card-meta"><span className={`category-symbol category-${getCategoryGroup(facility)}`}>{categorySymbols[getCategoryGroup(facility)]}</span><span>{categories}{facility.address ? ` · ${facility.address}` : ''}</span></div>
       <div className="list-schedule">
-        {schedule.today !== '—' ? <div><span>本日</span><p>{schedule.today}</p></div> : schedule.regular !== '—' && <div><span>時間</span><p>{schedule.regular}</p></div>}
-        {schedule.closed !== '—' && <div><span>休館</span><p>{schedule.closed}</p></div>}
+        {schedule.today !== '—' && <div><span>本日</span><p>{schedule.today}</p></div>}
       </div>
-      {tags.length > 0 && <div className="list-condition-tags">{tags.map(value => <span key={value}>{value}</span>)}</div>}
       {notice && <div className={`list-notice ${facility.operational_status}`}>{notice}</div>}
-      {exhibitions.map(item => <div className={`card-exhibition ${exhibitionPhase(item) === '開催予定' ? 'exhibition-upcoming' : 'exhibition-ongoing'} ${exhibitionFilter !== 'any' ? 'featured' : ''}`} key={item.title}><em>{exhibitionPhase(item) || '特別展'}{item.is_sample && <small>サンプル</small>}</em><b>{item.title}</b><span>会期：{formatExhibitionPeriod(item)}</span></div>)}
+      {exhibitions.slice(0, 2).map(item => <div className={`card-exhibition ${exhibitionPhase(item) === '開催予定' ? 'exhibition-upcoming' : 'exhibition-ongoing'} ${exhibitionFilter !== 'any' ? 'featured' : ''}`} key={item.title}><em>{exhibitionPhase(item) || '特別展'}{item.is_sample && <small>サンプル</small>}</em><b>{item.title}</b><span>会期：{formatExhibitionPeriod(item)}</span></div>)}
+      {exhibitions.length > 2 && <div className="list-exhibition-more">ほか{exhibitions.length - 2}件の特別展</div>}
     </article>
   )
 }
