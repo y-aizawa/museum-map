@@ -29,9 +29,6 @@ type Facility = {
   categories: string[]
   topics: string[]
   operational_status: OperationalStatus
-  operational_status_label: string
-  visit_state: string
-  visit_state_label: string
   schedule_summary: string
   schedule_applicability: string
   schedule?: {
@@ -47,8 +44,6 @@ type Facility = {
   latitude: number
   longitude: number
   official_url: string
-  checked_on: string
-  evidence_urls: string[]
   publication_status?: PublicationStatus
   special_exhibitions?: Exhibition[]
   image_url?: string
