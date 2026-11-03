@@ -1,0 +1,80 @@
+[
+  {
+    "id": "art",
+    "label": "美術・デザイン",
+    "symbol": "美",
+    "color": "#a95676"
+  },
+  {
+    "id": "history",
+    "label": "歴史・民俗",
+    "symbol": "歴",
+    "color": "#b75f43"
+  },
+  {
+    "id": "science",
+    "label": "科学・自然",
+    "symbol": "科",
+    "color": "#277ca6"
+  },
+  {
+    "id": "industry",
+    "label": "産業・技術",
+    "symbol": "技",
+    "color": "#86613e"
+  },
+  {
+    "id": "transport",
+    "label": "交通・乗りもの",
+    "symbol": "交",
+    "color": "#3f678e"
+  },
+  {
+    "id": "literature",
+    "label": "文学",
+    "symbol": "文",
+    "color": "#76589a"
+  },
+  {
+    "id": "manga",
+    "label": "漫画・アニメ",
+    "symbol": "漫",
+    "color": "#b24f86"
+  },
+  {
+    "id": "performing",
+    "label": "音楽・映画・芸能",
+    "symbol": "芸",
+    "color": "#98623d"
+  },
+  {
+    "id": "sports",
+    "label": "スポーツ",
+    "symbol": "競",
+    "color": "#527c4c"
+  },
+  {
+    "id": "zoo",
+    "label": "動物園",
+    "symbol": "動",
+    "color": "#d57924"
+  },
+  {
+    "id": "aquarium",
+    "label": "水族館",
+    "symbol": "水",
+    "color": "#168b91"
+  },
+  {
+    "id": "botanical",
+    "label": "植物園",
+    "symbol": "植",
+    "color": "#3f8758"
+  },
+  {
+    "id": "other",
+    "label": "その他",
+    "symbol": "",
+    "color": "#6f7976"
+  }
+]

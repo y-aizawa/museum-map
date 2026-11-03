@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, NavigationControl, Popup, setWorkerUrl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import dataset from './data/museums.json'
+import categoryDefinitions from './data/categories.json'
 import { SAMPLE_EXHIBITIONS_BY_FACILITY, SHOW_SAMPLE_EXHIBITIONS } from './data/sampleExhibitions'
 
 type OperationalStatus = 'active' | 'suspended' | 'closed' | 'unknown'
 type PublicationStatus = 'normal' | 'hold'
-type CategoryGroup = 'art' | 'history' | 'science' | 'literature' | 'zoo' | 'aquarium' | 'botanical' | 'other' | 'unconfirmed'
+type CategoryGroup = 'art' | 'history' | 'science' | 'industry' | 'transport' | 'literature' | 'manga' | 'performing' | 'sports' | 'zoo' | 'aquarium' | 'botanical' | 'other'
 type VisitFilter = 'any' | 'open_now' | 'open_today'
 type ExhibitionFilter = 'any' | 'ongoing' | 'starts_30' | 'ends_14' | 'on_date'
 type SheetLevel = 0 | 1 | 2
@@ -35,6 +37,7 @@ type Facility = {
   category: string
   categories: string[]
   topics: string[]
+  primary_category: CategoryGroup
   operational_status: OperationalStatus
   schedule_summary: string
   schedule_applicability: string
@@ -101,22 +104,11 @@ const operationalLabels: Record<OperationalStatus, string> = {
   unknown: '現況未確認',
 }
 
-const categoryLabels: Record<CategoryGroup, string> = {
-  art: '美術',
-  history: '歴史',
-  science: '科学',
-  literature: '文学',
-  zoo: '動物園',
-  aquarium: '水族館',
-  botanical: '植物園',
-  other: 'その他',
-  unconfirmed: '未分類',
-}
-
-const categorySymbols: Record<CategoryGroup, string> = {
-  art: '美', history: '歴', science: '科', literature: '文',
-  zoo: '動', aquarium: '水', botanical: '植', other: '', unconfirmed: '',
-}
+const categoryGroups = categoryDefinitions.map(category => category.id as CategoryGroup)
+const categoryLabels = Object.fromEntries(categoryDefinitions.map(category => [category.id, category.label])) as Record<CategoryGroup, string>
+const categorySymbols = Object.fromEntries(categoryDefinitions.map(category => [category.id, category.symbol])) as Record<CategoryGroup, string>
+const categoryColors = Object.fromEntries(categoryDefinitions.map(category => [category.id, category.color])) as Record<CategoryGroup, string>
+const categoryStyle = (category: CategoryGroup) => ({ '--pin': categoryColors[category] }) as CSSProperties
 
 const cloneFilters = (value: Filters): Filters => ({
   ...value,
@@ -129,21 +121,7 @@ const sameValues = <T extends string>(left: T[], right: T[]) =>
   left.length === right.length && [...left].sort().every((value, index) => value === [...right].sort()[index])
 
 function getCategoryGroup(facility: Facility): CategoryGroup {
-  const explicit = [facility.category, ...facility.categories].join('・')
-  if (/動物園/.test(explicit)) return 'zoo'
-  if (/水族館/.test(explicit)) return 'aquarium'
-  if (/植物園|樹木園/.test(explicit)) return 'botanical'
-  if (/文学/.test(explicit)) return 'literature'
-  if (/美術館/.test(explicit)) return 'art'
-  if (/科学館|自然史|プラネタリウム/.test(explicit)) return 'science'
-  if (/歴史|記念館|歴史的建築|野外博物館/.test(explicit)) return 'history'
-  if (/未分類/.test(explicit) || (!facility.category && !facility.categories.length)) return 'unconfirmed'
-  const topics = facility.topics.join('・')
-  if (/文学|徳富/.test(topics)) return 'literature'
-  if (/美術|アート|工芸|デザイン|写真|広告/.test(topics)) return 'art'
-  if (/科学|技術|宇宙|自然史|鉱物|航空|エネルギー|ロボット/.test(topics)) return 'science'
-  if (/歴史|郷土|文化財|旧宅|昭和|皇室|民俗|刀剣|企業史/.test(topics)) return 'history'
-  return 'other'
+  return categoryGroups.includes(facility.primary_category) ? facility.primary_category : 'other'
 }
 
 function getPublicationStatus(facility: Facility): PublicationStatus {
@@ -187,7 +165,7 @@ function matchesFilters(facility: Facility, filters: Filters) {
   if (filters.operational.length && !filters.operational.includes(facility.operational_status)) return false
   if (filters.publication.length && !filters.publication.includes(getPublicationStatus(facility))) return false
   const category = getCategoryGroup(facility)
-  if (filters.categories.length && !filters.categories.includes(category) && !(category === 'unconfirmed' && filters.categories.includes('other'))) return false
+  if (filters.categories.length && !filters.categories.includes(category)) return false
   // visit_state is a dated 2026-11-01 sample, so it is intentionally not used for current-time assertions.
   if (filters.visit !== 'any') return false
   return exhibitionMatches(facility, filters.exhibition, filters.exhibitionDate)
@@ -631,6 +609,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect
       const pin = document.createElement('button')
       pin.type = 'button'
       pin.className = `museum-pin category-${getCategoryGroup(facility)}`
+      pin.style.setProperty('--pin', categoryColors[getCategoryGroup(facility)])
       pin.setAttribute('aria-label', `${facility.name}、${operationalLabels[facility.operational_status]}`)
       const symbol = document.createElement('span')
       symbol.textContent = categorySymbols[getCategoryGroup(facility)]
@@ -801,7 +780,7 @@ function FilterPanel({ draft, onChange, onClose, onApply }: {
       <div className="filter-scroll">
         <section><h3>運営状態 <small>複数選択</small></h3><CheckboxGroup values={['active', 'suspended', 'closed', 'unknown']} selected={draft.operational} labels={operationalLabels} onChange={operational => onChange({ ...draft, operational })} /></section>
         <section><h3>掲載確認状態 <small>複数選択</small></h3><CheckboxGroup values={['normal', 'hold']} selected={draft.publication} labels={publicationLabels} onChange={publication => onChange({ ...draft, publication })} /></section>
-        <section><h3>カテゴリ <small>複数選択</small></h3><CheckboxGroup values={['art', 'history', 'science', 'literature', 'zoo', 'aquarium', 'botanical', 'other']} selected={draft.categories} labels={categoryLabels} onChange={categories => onChange({ ...draft, categories })} /></section>
+        <section><h3>カテゴリ <small>複数選択</small></h3><CheckboxGroup values={categoryGroups} selected={draft.categories} labels={categoryLabels} onChange={categories => onChange({ ...draft, categories })} /></section>
         <section><h3>本日の訪問条件 <small>単一選択</small></h3><RadioGroup values={['any', 'open_now', 'open_today']} selected={draft.visit} labels={visitLabels} onChange={visit => onChange({ ...draft, visit })} /><p className="filter-help">現在日時で安全に判定できる営業時間データのみ対象にします。</p></section>
         <section><h3>特別展 <small>単一選択</small></h3><RadioGroup values={['any', 'ongoing', 'starts_30', 'ends_14', 'on_date']} selected={draft.exhibition} labels={exhibitionLabels} onChange={exhibition => onChange({ ...draft, exhibition })} />{draft.exhibition === 'on_date' && <input className="date-input" type="date" value={draft.exhibitionDate} onChange={event => onChange({ ...draft, exhibitionDate: event.target.value })} />}</section>
       </div>
@@ -834,7 +813,7 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
     }}>
       {facility.image_url && <img src={facility.image_url} alt="" />}
       <h3><button className="list-card-title" onClick={onSelect} aria-pressed={selected}>{facility.name}</button><span className="list-card-arrow" aria-hidden="true">›</span></h3>
-      <div className="list-card-meta"><span className={`category-symbol category-${getCategoryGroup(facility)}`}>{categorySymbols[getCategoryGroup(facility)]}</span><span>{categories}{facility.address ? ` · ${facility.address}` : ''}</span></div>
+      <div className="list-card-meta"><span className={`category-symbol category-${getCategoryGroup(facility)}`} style={categoryStyle(getCategoryGroup(facility))}>{categorySymbols[getCategoryGroup(facility)]}</span><span>{categories}{facility.address ? ` · ${facility.address}` : ''}</span></div>
       <div className="list-schedule">
         <div><span>本日</span><p>{facility.operational_status === 'closed' ? '閉館しました' : facility.operational_status === 'suspended' ? '休館中' : schedule.today !== '—' ? schedule.today : '公式サイトでご確認ください'}</p></div>
       </div>
@@ -1050,7 +1029,7 @@ function App() {
             <Icon name="search" size={18} />
             <input value={query} onFocus={() => setSuggestionsOpen(true)} onChange={event => { setQuery(event.target.value); setSuggestionsOpen(true); if (!event.target.value) setTemporaryId(null) }} placeholder="施設名を検索" aria-label="施設名を検索" />
             {query && <Button onClick={() => { setQuery(''); setSuggestionsOpen(false); setTemporaryId(null) }} aria-label="検索を消去"><Icon name="close" size={15} /></Button>}
-            {suggestionsOpen && query && <div className="search-suggestions">{suggestions.length ? suggestions.map(item => <Button key={item.id} onClick={() => selectSearch(item)}><span className={`category-symbol category-${getCategoryGroup(item)}`}>{categorySymbols[getCategoryGroup(item)]}</span><div><strong>{item.name}</strong>{item.aliases.length > 0 && <small>{item.aliases.join('・')}</small>}</div></Button>) : <p>一致する施設がありません</p>}</div>}
+            {suggestionsOpen && query && <div className="search-suggestions">{suggestions.length ? suggestions.map(item => <Button key={item.id} onClick={() => selectSearch(item)}><span className={`category-symbol category-${getCategoryGroup(item)}`} style={categoryStyle(getCategoryGroup(item))}>{categorySymbols[getCategoryGroup(item)]}</span><div><strong>{item.name}</strong>{item.aliases.length > 0 && <small>{item.aliases.join('・')}</small>}</div></Button>) : <p>一致する施設がありません</p>}</div>}
           </div>
           {!mobile && <Button className={`toolbar-button ${listOpen ? 'active' : ''}`} onClick={openList}><Icon name="list" size={18} />一覧 {listOpen ? listItems.length : currentRangeCount}件</Button>}
           <Button className={`toolbar-button ${activeChips.length ? 'active' : ''}`} onClick={openFilters}><Icon name="sliders" size={18} />フィルター{activeChips.length > 0 && <b>{activeChips.length}</b>}</Button>
@@ -1064,8 +1043,8 @@ function App() {
 
       {!mapError && <div className={`map-legend ${legendOpen ? 'open' : ''}`}>
         <Button onClick={() => setLegendOpen(value => !value)}><span>凡例</span><Icon name="chevron" size={14} /></Button>
-        {legendOpen && <div>{(['art', 'history', 'science', 'literature', 'zoo', 'aquarium', 'botanical', 'other'] as CategoryGroup[]).map(category => (
-          <span key={category}><i className={`legend-pin category-${category}`}>{categorySymbols[category]}</i>{category === 'other' ? 'その他・未分類' : categoryLabels[category]}</span>
+        {legendOpen && <div>{categoryGroups.map(category => (
+          <span key={category}><i className={`legend-pin category-${category}`} style={categoryStyle(category)}>{categorySymbols[category]}</i>{categoryLabels[category]}</span>
         ))}</div>}
       </div>}
 
