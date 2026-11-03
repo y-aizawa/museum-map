@@ -20,6 +20,13 @@ type Exhibition = {
   is_sample?: boolean
 }
 
+type WeeklyScheduleRule = {
+  days: string[]
+  open: string
+  close: string
+  last_admission?: string
+}
+
 type Facility = {
   id: string
   name: string
@@ -36,7 +43,7 @@ type Facility = {
     valid_from?: string
     valid_through?: string
     holiday_rule?: string
-    weekly?: { days: string[]; open: string; close: string; last_admission?: string }[]
+    weekly?: WeeklyScheduleRule[]
   } | null
   reservation: string
   status_note: string
@@ -137,6 +144,15 @@ function todayInTokyo() {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
 }
 
+function weekdayCodeInTokyo() {
+  const weekday = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Tokyo', weekday: 'short' }).format(new Date())
+  return ({ Mon: 'mo', Tue: 'tu', Wed: 'we', Thu: 'th', Fri: 'fr', Sat: 'sa', Sun: 'su' } as Record<string, string>)[weekday]
+}
+
+function weeklyRuleTime(rule: WeeklyScheduleRule) {
+  return `${rule.open}–${rule.close}${rule.last_admission ? `（最終入館 ${rule.last_admission}）` : ''}`
+}
+
 function datePlus(days: number) {
   const date = new Date(`${todayInTokyo()}T00:00:00+09:00`)
   date.setDate(date.getDate() + days)
@@ -190,10 +206,11 @@ function scheduleDisplay(facility: Facility): ScheduleDisplay {
   }
   if (structured?.weekly?.length && ['current_baseline', 'current_exhibition'].includes(facility.schedule_applicability)) {
     const days: Record<string, string> = { mo: '月', tu: '火', we: '水', th: '木', fr: '金', sa: '土', su: '日' }
-    const lines = structured.weekly.map(rule => `${rule.days.map(day => days[day] || day).join('・')} ${rule.open}–${rule.close}${rule.last_admission ? `（最終入館 ${rule.last_admission}）` : ''}`)
-    // A weekly baseline alone cannot establish today's holiday/temporary closure exceptions.
+    const lines = structured.weekly.map(rule => `${rule.days.map(day => days[day] || day).join('・')} ${weeklyRuleTime(rule)}`)
+    const todayRules = structured.weekly.filter(rule => rule.days.includes(weekdayCodeInTokyo()))
+    const today = todayRules.length ? todayRules.map(weeklyRuleTime).join('／') : '通常休館日'
     const closed = facility.schedule_summary.split(/[。]/).filter(clause => /休館|休園|定休/.test(clause)).join('。')
-    return { today: '—', regular: lines.length <= 2 ? lines.join('／') : lines[0] + ' ほか', closed: closed || '—', details: [...lines, structured.holiday_rule || ''].filter(Boolean).join('\n') }
+    return { today, regular: lines.length <= 2 ? lines.join('／') : lines[0] + ' ほか', closed: closed || '—', details: [...lines, structured.holiday_rule || ''].filter(Boolean).join('\n') }
   }
   const currentSchedule = ['current_baseline', 'current_exhibition', 'reservation_calendar'].includes(facility.schedule_applicability)
   const summary = currentSchedule && facility.schedule_summary !== '未確認'
