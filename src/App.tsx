@@ -668,8 +668,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, onSelect, onBoun
       .setDOMContent(popupContent)
       .addTo(map)
     popupRef.current = popup
-    // Let MapLibre choose the bubble direction without moving the map.
-    // Limit its height to the larger available space above/below the pin.
+    // Desktop uses the space beside the pin; mobile keeps automatic anchors.
     const fitPopup = () => {
       if (popupRef.current !== popup) return
       const height = map.getContainer().clientHeight
@@ -677,8 +676,27 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, onSelect, onBoun
       const top = compact ? 125 : 105
       const bottom = compact ? 85 : 45
       const point = map.project([facility.longitude, facility.latitude])
+      const width = map.getContainer().clientWidth
+      const bubbleWidth = popup.getElement().offsetWidth
+      const rightSpace = width - 60 - point.x
+      const leftSpace = point.x - 16
+      const sideways = !compact && Math.max(rightSpace, leftSpace) >= bubbleWidth + 28
+      const tip = popup.getElement().querySelector<HTMLElement>('.maplibregl-popup-tip')
+      if (sideways) {
+        popup.options.anchor = rightSpace >= bubbleWidth + 28 ? 'left' : 'right'
+        popupContent.style.maxHeight = `${Math.max(80, Math.min(620, height - top - bottom))}px`
+        const bubbleHeight = popup.getElement().offsetHeight
+        const center = Math.max(top + bubbleHeight / 2, Math.min(point.y, height - bottom - bubbleHeight / 2))
+        const shift = center - point.y
+        popup.setOffset([popup.options.anchor === 'left' ? 28 : -28, shift])
+        if (tip) tip.style.transform = `translateY(${Math.max(-bubbleHeight / 2 + 24, Math.min(bubbleHeight / 2 - 24, -shift))}px)`
+        return
+      }
+      popup.options.anchor = undefined
+      if (tip) tip.style.transform = ''
       const available = Math.max(point.y - top, height - bottom - point.y) - 40
       popupContent.style.maxHeight = `${Math.max(80, Math.min(520, available))}px`
+      popup.setOffset(28)
       popup.setPadding({ top, bottom, left: 16, right: 60 })
     }
     const frame = requestAnimationFrame(fitPopup)

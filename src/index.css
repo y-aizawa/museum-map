@@ -118,6 +118,8 @@ button, input { font: inherit; }
 .popup-links a { flex: 1; padding: 8px 5px; border: 1px solid var(--brand); border-radius: 7px; color: var(--brand); text-align: center; text-decoration: none; font-size: 9px; font-weight: 700; }
 .popup-links a:first-child { color: white; background: var(--brand); }
 .maplibregl-popup-content { border-radius: 20px; }
+.maplibregl-popup-anchor-left .maplibregl-popup-content,
+.maplibregl-popup-anchor-right .maplibregl-popup-content { max-height: calc(100dvh - 150px); }
 .map-popup { width: min(370px,calc(100vw - 60px)); padding: 21px; }
 .popup-topline { font-size: 12px; }
 .popup-title { margin-top: 8px; font-size: 22px; }
