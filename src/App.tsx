@@ -73,17 +73,7 @@ type Filters = {
   exhibitionDate: string
 }
 
-type Coordinate = { latitude: number; longitude: number }
-
-function distanceKm(left: Coordinate, right: Coordinate) {
-  const radians = (value: number) => value * Math.PI / 180
-  const a = Math.sin(radians(right.latitude - left.latitude) / 2) ** 2
-    + Math.cos(radians(left.latitude)) * Math.cos(radians(right.latitude))
-    * Math.sin(radians(right.longitude - left.longitude) / 2) ** 2
-  return 6371 * 2 * Math.asin(Math.sqrt(Math.min(1, a)))
-}
-
-type BoundsValue = { west: number; south: number; east: number; north: number; center: Coordinate }
+type BoundsValue = { west: number; south: number; east: number; north: number }
 
 const facilities = (dataset.facilities as Facility[]).map(facility => ({
   ...facility,
@@ -533,8 +523,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect
   const publishBounds = useCallback(() => {
     const bounds = mapRef.current?.getBounds()
     if (!bounds) return
-    const center = mapRef.current!.getCenter()
-    onBounds({ center: { latitude: center.lat, longitude: center.lng }, west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth() })
+    onBounds({ west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth() })
   }, [onBounds])
 
   useEffect(() => {
@@ -654,7 +643,6 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect
       const pin = document.createElement('button')
       pin.type = 'button'
       pin.className = `museum-pin category-${getCategoryGroup(facility)}`
-      pin.style.setProperty('--pin', categoryColors[getCategoryGroup(facility)])
       pin.setAttribute('aria-label', `${facility.name}、${operationalLabels[facility.operational_status]}`)
       const symbol = document.createElement('span')
       symbol.textContent = categorySymbols[getCategoryGroup(facility)]
@@ -666,6 +654,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect
         offset: [0, 0],
         subpixelPositioning: true,
       })
+      pin.style.setProperty('--pin', categoryColors[getCategoryGroup(facility)])
         .setLngLat([facility.longitude, facility.latitude])
         .addTo(map)
       pin.addEventListener('click', event => {
@@ -919,7 +908,7 @@ function FacilityList({ items, selectedId, selectedFacility, canGoBack, outsideF
         event.currentTarget.setPointerCapture(event.pointerId)
       }} onPointerUp={onPointerUp} onPointerCancel={() => { dragStart.current = null }}>
         {mobile && <span className="sheet-grip" />}
-        {showDetail ? <><Button className="sheet-back" onClick={onBack}>{canGoBack ? '‹ 一覧に戻る' : '‹ 一覧を表示'}</Button><Button onClick={onDetailClose} aria-label="施設情報を閉じる"><Icon name="close" /></Button></> : <><div><small>地図の中央から近い順</small><h2>この範囲の施設 <b>{items.length}</b></h2></div>
+        {showDetail ? <>{canGoBack ? <Button className="sheet-back" onClick={onBack}>‹ 一覧に戻る</Button> : <span aria-hidden="true" />}<Button onClick={onDetailClose} aria-label="施設情報を閉じる"><Icon name="close" /></Button></> : <><div><small>地図の表示範囲</small><h2>この範囲の施設 <b>{items.length}</b></h2></div>
         {!mobile && <Button onClick={onClose} aria-label="一覧を閉じる"><Icon name="close" /></Button>}
         {mobile && <Button className="list-collapse" onClick={() => onSheetLevel(0)} aria-label="一覧を折りたたむ"><Icon name="chevron" /></Button>}</>}
       </header>
@@ -959,14 +948,7 @@ function App() {
     const temporary = facilities.find(item => item.id === temporaryId)
     return temporary ? [...filtered, temporary] : filtered
   }, [filtered, temporaryId])
-  const distanceOrigin = useMemo<Coordinate>(() => {
-    const bounds = listBounds || liveBounds
-    return bounds ? bounds.center
-      : { latitude: 35.68, longitude: 139.63 }
-  }, [listBounds, liveBounds])
-  const listItems = useMemo(() => filtered.filter(item => isInBounds(item, listBounds))
-    .sort((left, right) => distanceKm(distanceOrigin, left) - distanceKm(distanceOrigin, right)
-      || left.name.localeCompare(right.name, 'ja')), [filtered, listBounds, distanceOrigin])
+  const listItems = useMemo(() => filtered.filter(item => isInBounds(item, listBounds)), [filtered, listBounds])
   const currentRangeCount = useMemo(() => filtered.filter(item => isInBounds(item, liveBounds)).length, [filtered, liveBounds])
   const suggestions = useMemo(() => {
     const text = query.trim().toLowerCase()
@@ -1004,17 +986,6 @@ function App() {
       setSheetLevel(1)
     } else {
       window.setTimeout(() => setListBounds(liveBoundsRef.current), 360)
-    }
-  }
-  const showListFromDetail = () => {
-    setSelectedId(null)
-    if (selectionOrigin === 'list') {
-      setSheetLevel(previousListLevel.current)
-      if (!listBounds) setListBounds(liveBoundsRef.current)
-    } else {
-      setSheetLevel(1)
-      setListBounds(liveBoundsRef.current)
-      setTemporaryId(null)
     }
   }
   const selectFromList = (facility: Facility) => {
@@ -1096,7 +1067,7 @@ function App() {
         ))}</div>}
       </div>}
 
-      {effectiveListOpen && !filterOpen && <FacilityList items={listItems} selectedId={selectedId} selectedFacility={mobile ? facilities.find(item => item.id === selectedId) : undefined} canGoBack={selectionOrigin === 'list'} outsideFilters={Boolean(temporaryId && temporaryId === selectedId)} onBack={showListFromDetail} onDetailClose={() => { setSelectedId(null); setSheetLevel(0) }} stale={boundsStale} mobile={mobile} sheetLevel={sheetLevel} exhibitionFilter={filters.exhibition} onSheetLevel={level => { setSheetLevel(level); if (level === 0) setSelectedId(null); if (!listBounds) setListBounds(liveBoundsRef.current) }} onRefresh={() => setListBounds(liveBoundsRef.current)} onReset={initialReset} onClose={() => setListOpen(false)} onSelect={selectFromList} />}
+      {effectiveListOpen && !filterOpen && <FacilityList items={listItems} selectedId={selectedId} selectedFacility={mobile ? facilities.find(item => item.id === selectedId) : undefined} canGoBack={selectionOrigin === 'list'} outsideFilters={Boolean(temporaryId && temporaryId === selectedId)} onBack={() => { setSelectedId(null); setSheetLevel(previousListLevel.current); if (!listBounds) setListBounds(liveBoundsRef.current) }} onDetailClose={() => { setSelectedId(null); setSheetLevel(0) }} stale={boundsStale} mobile={mobile} sheetLevel={sheetLevel} exhibitionFilter={filters.exhibition} onSheetLevel={level => { setSheetLevel(level); if (level === 0) setSelectedId(null); if (!listBounds) setListBounds(liveBoundsRef.current) }} onRefresh={() => setListBounds(liveBoundsRef.current)} onReset={initialReset} onClose={() => setListOpen(false)} onSelect={selectFromList} />}
       {mobile && !selectedId && !filterOpen && sheetLevel === 0 && <Button className="mobile-list-peek" onClick={openList}><span /><div>この範囲の施設 <b>{currentRangeCount}</b></div><Icon name="chevron" size={16} /></Button>}
 
       {filterOpen && <FilterPanel draft={draft} onChange={setDraft} onClose={() => setFilterOpen(false)} onApply={applyFilters} />}
