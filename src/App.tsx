@@ -67,6 +67,7 @@ type Filters = {
   operational: OperationalStatus[]
   publication: PublicationStatus[]
   categories: CategoryGroup[]
+  includeSubcategories: boolean
   museumCategories: MuseumCategory[]
   visit: VisitFilter
   exhibition: ExhibitionFilter
@@ -96,12 +97,13 @@ const INITIAL_FILTERS: Filters = {
   operational: ['active', 'unknown'],
   publication: ['normal'],
   categories: [],
+  includeSubcategories: true,
   museumCategories: [],
   visit: 'any',
   exhibition: 'any',
   exhibitionDate: '',
 }
-const ALL_FILTERS: Filters = { operational: [], publication: [], categories: [], museumCategories: [], visit: 'any', exhibition: 'any', exhibitionDate: '' }
+const ALL_FILTERS: Filters = { operational: [], publication: [], categories: [], includeSubcategories: true, museumCategories: [], visit: 'any', exhibition: 'any', exhibitionDate: '' }
 
 const operationalLabels: Record<OperationalStatus, string> = {
   active: '運営中',
@@ -183,8 +185,10 @@ function exhibitionMatches(facility: Facility, filter: ExhibitionFilter, date: s
 function matchesFilters(facility: Facility, filters: Filters) {
   if (filters.operational.length && !filters.operational.includes(facility.operational_status)) return false
   if (filters.publication.length && !filters.publication.includes(getPublicationStatus(facility))) return false
-  const category = getCategoryGroup(facility)
-  if (filters.categories.length && !filters.categories.includes(category)) return false
+  const categories = filters.includeSubcategories
+    ? [getCategoryGroup(facility), ...(facility.subcategories || [])]
+    : [getCategoryGroup(facility)]
+  if (filters.categories.length && !filters.categories.some(category => categories.includes(category))) return false
   if (filters.museumCategories.length && !filters.museumCategories.some(category => facility.museum_categories.includes(category))) return false
   // visit_state is a dated 2026-11-01 sample, so it is intentionally not used for current-time assertions.
   if (filters.visit !== 'any') return false
@@ -825,7 +829,7 @@ function FilterPanel({ draft, onChange, onClose, onApply }: {
       <div className="filter-scroll">
         <section><h3>運営状態 <small>複数選択</small></h3><CheckboxGroup values={['active', 'suspended', 'closed', 'unknown']} selected={draft.operational} labels={operationalLabels} onChange={operational => onChange({ ...draft, operational })} /></section>
         <section><h3>掲載確認状態 <small>複数選択</small></h3><CheckboxGroup values={['normal', 'hold']} selected={draft.publication} labels={publicationLabels} onChange={publication => onChange({ ...draft, publication })} /></section>
-        <section><h3>カテゴリ <small>複数選択</small></h3><CheckboxGroup values={categoryGroups} selected={draft.categories} labels={categoryLabels} onChange={categories => onChange({ ...draft, categories })} /></section>
+        <section><h3>カテゴリ <small>複数選択</small></h3><CheckboxGroup values={categoryGroups} selected={draft.categories} labels={categoryLabels} onChange={categories => onChange({ ...draft, categories })} /><label className="filter-subcategory-option"><input type="checkbox" checked={draft.includeSubcategories} onChange={event => onChange({ ...draft, includeSubcategories: event.target.checked })} /><span aria-hidden="true">{draft.includeSubcategories ? '✓' : ''}</span><span><b>サブカテゴリも含める</b><small>オフにすると主カテゴリだけで絞り込みます</small></span></label></section>
         <section><h3>博物館区分 <small>複数選択</small></h3><CheckboxGroup values={museumCategoryValues} selected={draft.museumCategories} labels={museumCategoryLabels} onChange={museumCategories => onChange({ ...draft, museumCategories })} /><p className="filter-help">登録博物館・指定施設は文化庁名簿による区分です。それ以外は情報源を問わず博物館類似施設の候補として表示し、制度上の区分を確定したものではありません。</p></section>
         <section><h3>本日の訪問条件 <small>単一選択</small></h3><RadioGroup values={['any', 'open_now', 'open_today']} selected={draft.visit} labels={visitLabels} onChange={visit => onChange({ ...draft, visit })} /><p className="filter-help">現在日時で安全に判定できる営業時間データのみ対象にします。</p></section>
         <section><h3>特別展 <small>単一選択</small></h3><RadioGroup values={['any', 'ongoing', 'starts_30', 'ends_14', 'on_date']} selected={draft.exhibition} labels={exhibitionLabels} onChange={exhibition => onChange({ ...draft, exhibition })} />{draft.exhibition === 'on_date' && <input className="date-input" type="date" value={draft.exhibitionDate} onChange={event => onChange({ ...draft, exhibitionDate: event.target.value })} />}</section>
@@ -1059,6 +1063,7 @@ function App() {
       remove: () => setFilters(current => ({ ...current, publication: [...INITIAL_FILTERS.publication] })),
     })
     filters.categories.forEach(value => chips.push({ key: `c-${value}`, label: categoryLabels[value], remove: () => setFilters(current => ({ ...current, categories: current.categories.filter(item => item !== value) })) }))
+    if (filters.categories.length && filters.includeSubcategories) chips.push({ key: 'include-subcategories', label: 'サブカテゴリ含む', remove: () => setFilters(current => ({ ...current, includeSubcategories: false })) })
     filters.museumCategories.forEach(value => chips.push({ key: `mc-${value}`, label: museumCategoryLabels[value], remove: () => setFilters(current => ({ ...current, museumCategories: current.museumCategories.filter(item => item !== value) })) }))
     if (filters.visit !== 'any') chips.push({ key: 'visit', label: filters.visit === 'open_now' ? '今開いている' : '本日開館', remove: () => setFilters(current => ({ ...current, visit: 'any' })) })
     if (filters.exhibition !== 'any') chips.push({ key: 'exhibition', label: '特別展条件', remove: () => setFilters(current => ({ ...current, exhibition: 'any', exhibitionDate: '' })) })
