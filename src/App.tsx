@@ -369,7 +369,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   const title = document.createElement('strong')
   title.className = 'popup-title'
   title.textContent = facility.name
-  root.append(top, title)
+  root.append(top)
   const museumCategories = displayMuseumCategories(facility)
   if (museumCategories.length) {
     const museumCategoryRow = document.createElement('div')
@@ -384,6 +384,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
     })
     root.append(museumCategoryRow)
   }
+  root.append(title)
   const schedule = scheduleDisplay(facility)
   const scheduleElement = document.createElement('div')
   scheduleElement.className = 'popup-schedule'
@@ -862,9 +863,9 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
       if (!(event.target as HTMLElement).closest('a, button, details')) onSelect()
     }}>
       {facility.image_url && <img src={facility.image_url} alt="" />}
+      <div className="list-museum-categories">{displayMuseumCategories(facility).map(category => <span key={category}>{category}</span>)}</div>
       <h3><button className="list-card-title" onClick={onSelect} aria-pressed={selected}>{facility.name}</button><span className="list-card-arrow" aria-hidden="true">›</span></h3>
       <div className="list-card-meta"><span className={`category-symbol category-${getCategoryGroup(facility)}`} style={categoryStyle(getCategoryGroup(facility))}>{categorySymbols[getCategoryGroup(facility)]}</span><span>{categories}{facility.address ? ` · ${facility.address}` : ''}</span></div>
-      <div className="list-museum-categories">{displayMuseumCategories(facility).map(category => <span key={category}>{category}</span>)}</div>
       <div className="list-schedule">
         <div><span>本日</span><p>{facility.operational_status === 'closed' ? '閉館しました' : facility.operational_status === 'suspended' ? '休館中' : schedule.today !== '—' ? schedule.today : '公式サイトでご確認ください'}</p></div>
       </div>

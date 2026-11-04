@@ -92,7 +92,7 @@ button, input { font: inherit; }
 .map-popup > img { width: calc(100% + 30px); height: 118px; margin: -15px -15px 11px; object-fit: cover; }
 .popup-topline { padding-right: 28px; color: var(--muted); font-size: 9px; }
 .popup-title { display: block; margin-top: 4px; padding-right: 24px; font-size: 18px; line-height: 1.45; letter-spacing: -.02em; }
-.popup-museum-categories { margin-top: 7px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.popup-museum-categories { margin-top: 7px; padding-right: 24px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 .popup-museum-categories > span { color: var(--muted); font-size: 8px; }
 .popup-museum-categories > b { padding: 3px 6px; border: 1px solid #b9d0c9; border-radius: 999px; color: var(--brand-dark); background: #f0f7f5; font-size: 8px; font-weight: 600; }
 .popup-schedule { margin-top: 9px; }
@@ -127,7 +127,7 @@ button, input { font: inherit; }
 .map-popup { width: min(370px,calc(100vw - 60px)); padding: 21px; }
 .popup-topline { font-size: 12px; }
 .popup-title { margin-top: 8px; font-size: 22px; }
-.popup-museum-categories { margin-top: 10px; }
+.popup-museum-categories { margin-top: 6px; }
 .popup-museum-categories > span, .popup-museum-categories > b { font-size: 10px; }
 .popup-schedule { margin-top: 18px; }
 .popup-schedule h3 { margin: 0 0 9px; font-size: 14px; }
@@ -179,7 +179,7 @@ button, input { font: inherit; }
 .list-card:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
 .list-card-meta { margin-top: 9px; display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 8px; white-space: nowrap; overflow: hidden; }
 .list-card-meta > span:last-child { overflow: hidden; text-overflow: ellipsis; }
-.list-museum-categories { margin: 7px 0 0 28px; display: flex; gap: 4px; flex-wrap: wrap; }
+.list-museum-categories { margin: 0 0 6px; display: flex; gap: 4px; flex-wrap: wrap; }
 .list-museum-categories span { padding: 2px 6px; border: 1px solid #c5d8d2; border-radius: 999px; color: var(--brand-dark); background: #f4f9f7; font-size: 8px; font-weight: 600; }
 .category-symbol { width: 22px; height: 22px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: white; background: var(--pin, var(--gray)); font-size: 9px; font-weight: 700; }
 .list-schedule { margin-top: 7px; }
