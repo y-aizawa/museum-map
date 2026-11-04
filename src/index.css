@@ -177,9 +177,11 @@ button, input { font: inherit; }
 .list-card-arrow { flex: 0 0 auto; color: var(--muted); font-size: 22px; font-weight: 400; }
 .list-exhibition-more { margin-top: 8px; color: var(--brand); font-size: 12px; }
 .list-card:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
-.list-card-meta { margin-top: 9px; display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 8px; white-space: nowrap; overflow: hidden; }
-.list-card-meta > span:last-child { overflow: hidden; text-overflow: ellipsis; }
-.list-museum-categories { margin: 0 0 6px; display: flex; gap: 4px; flex-wrap: wrap; }
+.list-card-classifications { margin-bottom: 6px; display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; }
+.list-card-meta { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; min-width: 0; }
+.list-card-meta > span:last-child { overflow-wrap: anywhere; }
+.list-card-address { margin-top: 6px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.list-museum-categories { display: flex; gap: 4px; flex-wrap: wrap; }
 .list-museum-categories span { padding: 2px 6px; border: 1px solid #c5d8d2; border-radius: 999px; color: var(--brand-dark); background: #f4f9f7; font-size: 8px; font-weight: 600; }
 .category-symbol { width: 22px; height: 22px; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: white; background: var(--pin, var(--gray)); font-size: 9px; font-weight: 700; }
 .list-schedule { margin-top: 7px; }

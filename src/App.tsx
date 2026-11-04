@@ -863,9 +863,12 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
       if (!(event.target as HTMLElement).closest('a, button, details')) onSelect()
     }}>
       {facility.image_url && <img src={facility.image_url} alt="" />}
-      <div className="list-museum-categories">{displayMuseumCategories(facility).map(category => <span key={category}>{category}</span>)}</div>
+      <div className="list-card-classifications">
+        <div className="list-card-meta"><span className={`category-symbol category-${getCategoryGroup(facility)}`} style={categoryStyle(getCategoryGroup(facility))}>{categorySymbols[getCategoryGroup(facility)]}</span><span>{categories}</span></div>
+        <div className="list-museum-categories">{displayMuseumCategories(facility).map(category => <span key={category}>{category}</span>)}</div>
+      </div>
       <h3><button className="list-card-title" onClick={onSelect} aria-pressed={selected}>{facility.name}</button><span className="list-card-arrow" aria-hidden="true">›</span></h3>
-      <div className="list-card-meta"><span className={`category-symbol category-${getCategoryGroup(facility)}`} style={categoryStyle(getCategoryGroup(facility))}>{categorySymbols[getCategoryGroup(facility)]}</span><span>{categories}{facility.address ? ` · ${facility.address}` : ''}</span></div>
+      {facility.address && <div className="list-card-address">{facility.address}</div>}
       <div className="list-schedule">
         <div><span>本日</span><p>{facility.operational_status === 'closed' ? '閉館しました' : facility.operational_status === 'suspended' ? '休館中' : schedule.today !== '—' ? schedule.today : '公式サイトでご確認ください'}</p></div>
       </div>
