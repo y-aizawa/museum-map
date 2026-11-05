@@ -407,6 +407,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   hoursBox.className = 'popup-hours-box'
   const todayHours = document.createElement('strong')
   todayHours.className = 'popup-today-hours'
+  if (openingPlan && inactive) todayHours.classList.add('popup-status-with-plan')
   todayHours.textContent = facility.operational_status === 'closed' ? '閉館済み'
     : facility.operational_status === 'suspended' ? '休館中'
     : openingPlan ? openingPlanDate(openingPlan)
@@ -422,14 +423,8 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   if (openingPlan && inactive) {
     const plan = document.createElement('span')
     plan.className = 'popup-status-detail'
-    plan.textContent = `再開予定：${openingPlanDate(openingPlan)}`
+    plan.textContent = `${openingPlanDate(openingPlan)} 再開予定`
     hoursBox.append(plan)
-  }
-  if (inactive && publicNotice(facility)) {
-    const reason = document.createElement('span')
-    reason.className = 'popup-status-reason'
-    reason.textContent = publicNotice(facility)
-    hoursBox.append(reason)
   }
   if (!inactive && (schedule.details || schedule.regular !== '—' || schedule.closed !== '—')) {
     const details = document.createElement('details')
@@ -476,7 +471,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
     root.append(tagRow)
   }
   const noticeText = publicNotice(facility)
-  if (noticeText && !inactive) {
+  if (noticeText) {
     const notice = document.createElement('div')
     notice.className = `popup-notice ${facility.operational_status}`
     notice.textContent = noticeText
@@ -905,11 +900,10 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
       <div className={`list-schedule ${openingPlan ? 'list-opening-plan' : ''} ${['suspended', 'closed'].includes(facility.operational_status) ? 'list-inactive' : ''}`}>
         {['suspended', 'closed'].includes(facility.operational_status) ? <>
           <p>{facility.operational_status === 'closed' ? '閉館済み' : '休館中'}</p>
-          {openingPlan && <span className="list-status-detail">再開予定：{openingPlanDate(openingPlan)}</span>}
-          {notice && <span className="list-status-reason">{notice}</span>}
+          {openingPlan && <span className="list-status-detail">｜{openingPlanDate(openingPlan)}再開予定</span>}
         </> : <div><span>{openingPlan ? '開館予定' : '本日'}</span><p>{openingPlan ? openingPlanDate(openingPlan) : schedule.today !== '—' ? schedule.today : '公式サイトでご確認ください'}</p></div>}
       </div>
-      {notice && !['suspended', 'closed'].includes(facility.operational_status) && <div className={`list-notice ${facility.operational_status}`}>{notice}</div>}
+      {notice && <div className={`list-notice ${facility.operational_status}`}>{notice}</div>}
       {exhibitions.slice(0, 2).map(item => <div className={`card-exhibition ${exhibitionPhase(item) === '開催予定' ? 'exhibition-upcoming' : 'exhibition-ongoing'} ${exhibitionFilter !== 'any' ? 'featured' : ''}`} key={item.title}><em>{exhibitionPhase(item) || '特別展'}{item.is_sample && <small>サンプル</small>}</em><b>{item.title}</b><span>会期：{formatExhibitionPeriod(item)}</span></div>)}
       {exhibitions.length > 2 && <Button className="list-exhibition-more" onClick={onSelect}>ほか{exhibitions.length - 2}件を詳細で見る</Button>}
     </article>
