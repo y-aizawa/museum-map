@@ -178,7 +178,7 @@ button, input { font: inherit; }
 .list-card-arrow { flex: 0 0 auto; color: var(--muted); font-size: 22px; font-weight: 400; }
 .list-exhibition-more { margin-top: 8px; color: var(--brand); font-size: 12px; }
 .list-card:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
-.list-card-classifications { margin-bottom: 6px; display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; }
+.list-card-classifications { margin-top: 6px; display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; }
 .list-card-meta { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; min-width: 0; }
 .list-card-meta > span:last-child { overflow-wrap: anywhere; }
 .list-card-address { margin-top: 6px; color: var(--muted); font-size: 11px; line-height: 1.5; }
