@@ -28,6 +28,7 @@ button, input { font: inherit; }
 .map-canvas, .map-surface { width: 100%; height: 100%; }
 .map-surface { background: #eef1ef; }
 .desktop-list-open .map-area { left: 380px; }
+.map-center-target { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none; opacity: .8; z-index: 5; }
 
 .top-bar { position: fixed; top: 16px; left: 16px; right: 16px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; pointer-events: none; z-index: 40; }
 .logo-panel, .top-actions, .facility-search, .toolbar-button { pointer-events: auto; }

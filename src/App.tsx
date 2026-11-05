@@ -1096,6 +1096,10 @@ function App() {
 
       <section className="map-area">
         <MapCanvas items={visible} selectedId={filterOpen ? null : selectedId} temporaryId={temporaryId} layoutKey={layoutKey} mobile={mobile} onSelect={handleSelect} onBounds={handleBounds} onErrorChange={handleMapError} />
+        {!mapError && <svg className="map-center-target" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+          <path d="M12 4v16M4 12h16" stroke="white" strokeWidth="4" strokeLinecap="round" />
+          <path d="M12 4v16M4 12h16" stroke="#687671" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>}
       </section>
 
       {!mapError && <div className={`map-legend ${legendOpen ? 'open' : ''}`}>
