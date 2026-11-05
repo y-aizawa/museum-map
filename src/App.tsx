@@ -301,22 +301,19 @@ function formatExhibitionPeriod(exhibition: Exhibition) {
 }
 
 function publicNotice(facility: Facility) {
-  if (getOpeningPlan(facility)) return ''
-  if (facility.operational_status === 'closed') return '閉館しました'
+  if (facility.operational_status === 'closed') return ''
   if (facility.operational_status === 'unknown') return ''
   if (facility.operational_status === 'suspended') {
     const note = facility.status_note
-    if (/保存修理工事/.test(note)) return /2027年8月末/.test(note) ? '保存修理工事のため休館中。2027年8月末までの予定です' : '保存修理工事のため休館中'
-    if (/総合改修/.test(note)) return /2027年3月/.test(note) ? '総合改修のため休館中。2027年3月再開予定です' : '総合改修のため休館中'
-    if (/大規模改修/.test(note)) return '大規模改修のため休館中'
-    if (/設備工事/.test(note)) return '設備工事のため休館中'
-    if (/耐震性/.test(note)) return '耐震性確認のため休館中'
-    if (/機能移転準備/.test(note)) return '機能移転準備のため休館中'
-    if (/リニューアル/.test(note)) return /再開日未定/.test(note) ? 'リニューアルに向け休館中。再開日未定です' : 'リニューアルに向け休館中'
-    if (/休園/.test(note)) return '改修のため休園中'
-    if (/臨時休館/.test(note)) return '臨時休館中'
-    if (/再開日未定|再開時期未定/.test(note)) return '休館中。再開時期は未定です'
-    return '休止中です。最新情報は公式サイトをご確認ください'
+    if (/保存修理工事/.test(note)) return '保存修理工事のため'
+    if (/総合改修/.test(note)) return '総合改修のため'
+    if (/大規模改修/.test(note)) return '大規模改修のため'
+    if (/設備工事/.test(note)) return '設備工事のため'
+    if (/耐震性/.test(note)) return '耐震性確認のため'
+    if (/機能移転準備/.test(note)) return '機能移転準備のため'
+    if (/リニューアル/.test(note)) return 'リニューアルのため'
+    if (/改修/.test(note)) return '改修のため'
+    return ''
   }
   return ''
 }
@@ -404,23 +401,37 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   scheduleElement.className = 'popup-schedule'
   const hoursHeading = document.createElement('h3')
   const openingPlan = getOpeningPlan(facility)
+  const inactive = facility.operational_status === 'suspended' || facility.operational_status === 'closed'
   hoursHeading.textContent = openingPlan ? (openingPlan.kind === 'opening' ? '開館予定' : '再開予定') : '本日の開館時間'
   const hoursBox = document.createElement('div')
   hoursBox.className = 'popup-hours-box'
   const todayHours = document.createElement('strong')
   todayHours.className = 'popup-today-hours'
-  todayHours.textContent = openingPlan ? openingPlanDate(openingPlan) : facility.operational_status === 'closed' ? '閉館しました'
+  todayHours.textContent = facility.operational_status === 'closed' ? '閉館済み'
     : facility.operational_status === 'suspended' ? '休館中'
+    : openingPlan ? openingPlanDate(openingPlan)
     : schedule.today !== '—' ? schedule.today : '公式サイトでご確認ください'
-  if (schedule.today === '—' && !openingPlan) todayHours.classList.add('popup-hours-message')
-  if (openingPlan) {
+  if (schedule.today === '—' && !openingPlan && !inactive) todayHours.classList.add('popup-hours-message')
+  if (openingPlan && !inactive) {
     const state = document.createElement('span')
     state.className = 'popup-plan-state'
     state.textContent = openingPlan.kind === 'opening' ? '開館前' : '休館中'
     hoursBox.append(state)
   }
   hoursBox.append(todayHours)
-  if (schedule.details || schedule.regular !== '—' || schedule.closed !== '—') {
+  if (openingPlan && inactive) {
+    const plan = document.createElement('span')
+    plan.className = 'popup-status-detail'
+    plan.textContent = `再開予定：${openingPlanDate(openingPlan)}`
+    hoursBox.append(plan)
+  }
+  if (inactive && publicNotice(facility)) {
+    const reason = document.createElement('span')
+    reason.className = 'popup-status-reason'
+    reason.textContent = publicNotice(facility)
+    hoursBox.append(reason)
+  }
+  if (!inactive && (schedule.details || schedule.regular !== '—' || schedule.closed !== '—')) {
     const details = document.createElement('details')
     const summary = document.createElement('summary')
     summary.textContent = '曜日別の時間・休館日'
@@ -450,7 +461,8 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
     details.append(summary, content)
     hoursBox.append(details)
   }
-  scheduleElement.append(hoursHeading, hoursBox)
+  if (!inactive) scheduleElement.append(hoursHeading)
+  scheduleElement.append(hoursBox)
   root.append(scheduleElement)
   const tags = conditionTags(facility)
   if (tags.length) {
@@ -464,7 +476,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
     root.append(tagRow)
   }
   const noticeText = publicNotice(facility)
-  if (noticeText) {
+  if (noticeText && !inactive) {
     const notice = document.createElement('div')
     notice.className = `popup-notice ${facility.operational_status}`
     notice.textContent = noticeText
@@ -890,10 +902,14 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
         <div className="list-museum-categories">{displayMuseumCategories(facility).map(category => <span key={category}>{category}</span>)}</div>
       </div>
       {facility.address && <div className="list-card-address">{facility.address}</div>}
-      <div className={`list-schedule ${openingPlan ? 'list-opening-plan' : ''}`}>
-        <div><span>{openingPlan ? (openingPlan.kind === 'opening' ? '開館予定' : '再開予定') : '本日'}</span><p>{openingPlan ? openingPlanDate(openingPlan) : facility.operational_status === 'closed' ? '閉館しました' : facility.operational_status === 'suspended' ? '休館中' : schedule.today !== '—' ? schedule.today : '公式サイトでご確認ください'}</p></div>
+      <div className={`list-schedule ${openingPlan ? 'list-opening-plan' : ''} ${['suspended', 'closed'].includes(facility.operational_status) ? 'list-inactive' : ''}`}>
+        {['suspended', 'closed'].includes(facility.operational_status) ? <>
+          <p>{facility.operational_status === 'closed' ? '閉館済み' : '休館中'}</p>
+          {openingPlan && <span className="list-status-detail">再開予定：{openingPlanDate(openingPlan)}</span>}
+          {notice && <span className="list-status-reason">{notice}</span>}
+        </> : <div><span>{openingPlan ? '開館予定' : '本日'}</span><p>{openingPlan ? openingPlanDate(openingPlan) : schedule.today !== '—' ? schedule.today : '公式サイトでご確認ください'}</p></div>}
       </div>
-      {notice && <div className={`list-notice ${facility.operational_status}`}>{notice}</div>}
+      {notice && !['suspended', 'closed'].includes(facility.operational_status) && <div className={`list-notice ${facility.operational_status}`}>{notice}</div>}
       {exhibitions.slice(0, 2).map(item => <div className={`card-exhibition ${exhibitionPhase(item) === '開催予定' ? 'exhibition-upcoming' : 'exhibition-ongoing'} ${exhibitionFilter !== 'any' ? 'featured' : ''}`} key={item.title}><em>{exhibitionPhase(item) || '特別展'}{item.is_sample && <small>サンプル</small>}</em><b>{item.title}</b><span>会期：{formatExhibitionPeriod(item)}</span></div>)}
       {exhibitions.length > 2 && <Button className="list-exhibition-more" onClick={onSelect}>ほか{exhibitions.length - 2}件を詳細で見る</Button>}
     </article>
