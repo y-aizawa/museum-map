@@ -288,3 +288,9 @@ button, input { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* Opening plans stay separate from today's opening hours. */
+.opening-plan-toggle { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; cursor: pointer; }
+.opening-plan-toggle input { accent-color: var(--brand); }
+.popup-plan-state { display: block; margin-bottom: 5px; color: var(--muted); font-size: 12px; font-weight: 500; }
+.list-opening-plan > div { grid-template-columns: 48px minmax(0,1fr); }

@@ -3,6 +3,8 @@ import type { CSSProperties } from 'react'
 import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, NavigationControl, Popup, setWorkerUrl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import dataset from './data/museums.json'
+import { getOpeningPlan, matchesOperationalFilters, openingPlanDate } from './openingPlans'
+import type { OpeningPlan } from './openingPlans'
 import categoryDefinitions from './data/categories.json'
 import { SAMPLE_EXHIBITIONS_BY_FACILITY, SHOW_SAMPLE_EXHIBITIONS } from './data/sampleExhibitions'
 
@@ -43,6 +45,7 @@ type Facility = {
   subcategories?: CategoryGroup[]
   museum_categories: MuseumCategory[]
   operational_status: OperationalStatus
+  opening_plan?: OpeningPlan | null
   schedule_summary: string
   schedule_applicability: string
   schedule?: {
@@ -65,6 +68,7 @@ type Facility = {
 
 type Filters = {
   operational: OperationalStatus[]
+  includeOpeningPlans: boolean
   publication: PublicationStatus[]
   categories: CategoryGroup[]
   includeSubcategories: boolean
@@ -95,6 +99,7 @@ const facilities = (dataset.facilities as Facility[]).map(facility => ({
 setWorkerUrl(new URL(`${import.meta.env.BASE_URL}maplibre-gl-worker.mjs`, window.location.href).toString())
 const INITIAL_FILTERS: Filters = {
   operational: ['active', 'unknown'],
+  includeOpeningPlans: false,
   publication: ['normal', 'out_of_scope'],
   categories: [],
   includeSubcategories: true,
@@ -103,7 +108,7 @@ const INITIAL_FILTERS: Filters = {
   exhibition: 'any',
   exhibitionDate: '',
 }
-const ALL_FILTERS: Filters = { operational: [], publication: [], categories: [], includeSubcategories: true, museumCategories: [], visit: 'any', exhibition: 'any', exhibitionDate: '' }
+const ALL_FILTERS: Filters = { operational: [], includeOpeningPlans: true, publication: [], categories: [], includeSubcategories: true, museumCategories: [], visit: 'any', exhibition: 'any', exhibitionDate: '' }
 
 const operationalLabels: Record<OperationalStatus, string> = {
   active: '運営中',
@@ -190,7 +195,8 @@ function exhibitionMatches(facility: Facility, filter: ExhibitionFilter, date: s
 }
 
 function matchesFilters(facility: Facility, filters: Filters) {
-  if (filters.operational.length && !filters.operational.includes(facility.operational_status)) return false
+  if (!matchesOperationalFilters(facility, filters.operational, filters.includeOpeningPlans)) return false
+  if (filters.visit !== 'any' && getOpeningPlan(facility)) return false
   if (filters.publication.length && !filters.publication.includes(getPublicationStatus(facility))) return false
   const categories = filters.includeSubcategories
     ? [getCategoryGroup(facility), ...(facility.subcategories || [])]
@@ -232,7 +238,7 @@ function closureDisplay(value: string) {
 }
 
 function scheduleDisplay(facility: Facility): ScheduleDisplay {
-  const unavailable = facility.operational_status === 'closed' || facility.operational_status === 'suspended'
+  const unavailable = Boolean(getOpeningPlan(facility)) || facility.operational_status === 'closed' || facility.operational_status === 'suspended'
   if (unavailable) return { today: '—', regular: '—', closed: '—', details: '' }
   const structured = facility.schedule
   const date = todayInTokyo()
@@ -295,6 +301,7 @@ function formatExhibitionPeriod(exhibition: Exhibition) {
 }
 
 function publicNotice(facility: Facility) {
+  if (getOpeningPlan(facility)) return ''
   if (facility.operational_status === 'closed') return '閉館しました'
   if (facility.operational_status === 'unknown') return ''
   if (facility.operational_status === 'suspended') {
@@ -396,15 +403,22 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   const scheduleElement = document.createElement('div')
   scheduleElement.className = 'popup-schedule'
   const hoursHeading = document.createElement('h3')
-  hoursHeading.textContent = '本日の開館時間'
+  const openingPlan = getOpeningPlan(facility)
+  hoursHeading.textContent = openingPlan ? (openingPlan.kind === 'opening' ? '開館予定' : '再開予定') : '本日の開館時間'
   const hoursBox = document.createElement('div')
   hoursBox.className = 'popup-hours-box'
   const todayHours = document.createElement('strong')
   todayHours.className = 'popup-today-hours'
-  todayHours.textContent = facility.operational_status === 'closed' ? '閉館しました'
+  todayHours.textContent = openingPlan ? openingPlanDate(openingPlan) : facility.operational_status === 'closed' ? '閉館しました'
     : facility.operational_status === 'suspended' ? '休館中'
     : schedule.today !== '—' ? schedule.today : '公式サイトでご確認ください'
-  if (schedule.today === '—') todayHours.classList.add('popup-hours-message')
+  if (schedule.today === '—' && !openingPlan) todayHours.classList.add('popup-hours-message')
+  if (openingPlan) {
+    const state = document.createElement('span')
+    state.className = 'popup-plan-state'
+    state.textContent = openingPlan.kind === 'opening' ? '開館前' : '休館中'
+    hoursBox.append(state)
+  }
   hoursBox.append(todayHours)
   if (schedule.details || schedule.regular !== '—' || schedule.closed !== '—') {
     const details = document.createElement('details')
@@ -667,7 +681,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect
       pin.type = 'button'
       pin.className = `museum-pin category-${getCategoryGroup(facility)}`
       pin.style.setProperty('--pin', categoryColors[getCategoryGroup(facility)])
-      pin.setAttribute('aria-label', `${facility.name}、${operationalLabels[facility.operational_status]}`)
+      pin.setAttribute('aria-label', `${facility.name}、${getOpeningPlan(facility)?.kind === 'opening' ? '開館予定' : operationalLabels[facility.operational_status]}`)
       const symbol = document.createElement('span')
       symbol.textContent = categorySymbols[getCategoryGroup(facility)]
       pin.append(symbol)
@@ -834,7 +848,7 @@ function FilterPanel({ draft, onChange, onClose, onApply }: {
     <aside className="filter-panel" aria-label="施設フィルター">
       <header><div><small>表示条件を編集</small><h2>フィルター</h2></div><Button onClick={onClose} aria-label="閉じる"><Icon name="close" /></Button></header>
       <div className="filter-scroll">
-        <section><h3>運営状態 <small>複数選択</small></h3><CheckboxGroup values={['active', 'suspended', 'closed', 'unknown']} selected={draft.operational} labels={operationalLabels} onChange={operational => onChange({ ...draft, operational })} /></section>
+        <section><h3>運営状態 <small>複数選択</small></h3><CheckboxGroup values={['active', 'suspended', 'closed', 'unknown']} selected={draft.operational} labels={operationalLabels} onChange={operational => onChange({ ...draft, operational })} /><label className="opening-plan-toggle"><input type="checkbox" checked={draft.includeOpeningPlans} onChange={event => onChange({ ...draft, includeOpeningPlans: event.target.checked })} />開館・再開予定も表示</label><p className="filter-help">予定が公表されている館も表示します。通常の休館日・営業時間外とは別の条件です。</p></section>
         <section><h3>掲載状態 <small>複数選択</small></h3><CheckboxGroup values={['normal', 'hold', 'out_of_scope']} selected={draft.publication} labels={publicationLabels} onChange={publication => onChange({ ...draft, publication })} /><p className="filter-help">開発中の確認用に、掲載対象外の施設も表示できます。運営状態とは別の条件です。</p></section>
         <section><h3>カテゴリ <small>複数選択</small></h3><CheckboxGroup values={categoryGroups} selected={draft.categories} labels={categoryLabels} onChange={categories => onChange({ ...draft, categories })} /><label className="filter-subcategory-option"><input type="checkbox" checked={draft.includeSubcategories} onChange={event => onChange({ ...draft, includeSubcategories: event.target.checked })} /><span aria-hidden="true">{draft.includeSubcategories ? '✓' : ''}</span><span><b>サブカテゴリも含める</b><small>オフにすると主カテゴリだけで絞り込みます</small></span></label></section>
         <section><h3>博物館区分 <small>複数選択</small></h3><CheckboxGroup values={museumCategoryValues} selected={draft.museumCategories} labels={museumCategoryLabels} onChange={museumCategories => onChange({ ...draft, museumCategories })} /><p className="filter-help">登録博物館・指定施設は文化庁名簿による区分です。それ以外は情報源を問わず博物館類似施設の候補として表示し、制度上の区分を確定したものではありません。</p></section>
@@ -861,6 +875,7 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
     .sort((left, right) =>
     Number(exhibitionPhase(right) === '開催中') - Number(exhibitionPhase(left) === '開催中')
     || (left.start_date || '').localeCompare(right.start_date || ''))
+  const openingPlan = getOpeningPlan(facility)
   const schedule = scheduleDisplay(facility)
   const notice = publicNotice(facility)
   const categories = displayCategories(facility).join('｜')
@@ -875,8 +890,8 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
         <div className="list-museum-categories">{displayMuseumCategories(facility).map(category => <span key={category}>{category}</span>)}</div>
       </div>
       {facility.address && <div className="list-card-address">{facility.address}</div>}
-      <div className="list-schedule">
-        <div><span>本日</span><p>{facility.operational_status === 'closed' ? '閉館しました' : facility.operational_status === 'suspended' ? '休館中' : schedule.today !== '—' ? schedule.today : '公式サイトでご確認ください'}</p></div>
+      <div className={`list-schedule ${openingPlan ? 'list-opening-plan' : ''}`}>
+        <div><span>{openingPlan ? (openingPlan.kind === 'opening' ? '開館予定' : '再開予定') : '本日'}</span><p>{openingPlan ? openingPlanDate(openingPlan) : facility.operational_status === 'closed' ? '閉館しました' : facility.operational_status === 'suspended' ? '休館中' : schedule.today !== '—' ? schedule.today : '公式サイトでご確認ください'}</p></div>
       </div>
       {notice && <div className={`list-notice ${facility.operational_status}`}>{notice}</div>}
       {exhibitions.slice(0, 2).map(item => <div className={`card-exhibition ${exhibitionPhase(item) === '開催予定' ? 'exhibition-upcoming' : 'exhibition-ongoing'} ${exhibitionFilter !== 'any' ? 'featured' : ''}`} key={item.title}><em>{exhibitionPhase(item) || '特別展'}{item.is_sample && <small>サンプル</small>}</em><b>{item.title}</b><span>会期：{formatExhibitionPeriod(item)}</span></div>)}
@@ -1067,6 +1082,7 @@ function App() {
       label: `運営状態: ${filters.operational.map(value => operationalLabels[value]).join('・') || 'すべて'}`,
       remove: () => setFilters(current => ({ ...current, operational: [...INITIAL_FILTERS.operational] })),
     })
+    if (filters.includeOpeningPlans) chips.push({ key: 'opening-plans', label: '開館・再開予定も表示', remove: () => setFilters(current => ({ ...current, includeOpeningPlans: false })) })
     if (!sameValues(filters.publication, INITIAL_FILTERS.publication)) chips.push({
       key: 'publication',
       label: `掲載: ${filters.publication.map(value => publicationLabels[value]).join('・') || 'すべて'}`,
