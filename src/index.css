@@ -293,7 +293,7 @@ button, input { font: inherit; }
 .opening-plan-toggle { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; cursor: pointer; }
 .opening-plan-toggle input { accent-color: var(--brand); }
 .popup-plan-state { display: block; margin-bottom: 5px; color: var(--muted); font-size: 12px; font-weight: 500; }
-.popup-schedule > .popup-hours-box > .popup-status-detail { display: block; margin-top: 5px; color: var(--ink); font-size: 22px; font-weight: 650; line-height: 1.45; }
+.popup-schedule > .popup-hours-box > .popup-status-detail { display: block; margin-top: 5px; color: var(--ink); font-size: 14px; font-weight: 600; line-height: 1.5; }
 .popup-today-hours.popup-facility-status { color: var(--ink); font-size: 16px; font-weight: 600; }
 .popup-status-reason { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .list-inactive { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
