@@ -7,7 +7,7 @@ import categoryDefinitions from './data/categories.json'
 import { SAMPLE_EXHIBITIONS_BY_FACILITY, SHOW_SAMPLE_EXHIBITIONS } from './data/sampleExhibitions'
 
 type OperationalStatus = 'active' | 'suspended' | 'closed' | 'unknown'
-type PublicationStatus = 'normal' | 'hold'
+type PublicationStatus = 'normal' | 'hold' | 'out_of_scope'
 type CategoryGroup = 'art' | 'history' | 'science' | 'industry' | 'transport' | 'literature' | 'manga' | 'performing' | 'sports' | 'zoo' | 'aquarium' | 'botanical' | 'other'
 type MuseumCategory = 'registered_museum' | 'designated_facility' | 'museum_like_candidate'
 type VisitFilter = 'any' | 'open_now' | 'open_today'
@@ -95,7 +95,7 @@ const facilities = (dataset.facilities as Facility[]).map(facility => ({
 setWorkerUrl(new URL(`${import.meta.env.BASE_URL}maplibre-gl-worker.mjs`, window.location.href).toString())
 const INITIAL_FILTERS: Filters = {
   operational: ['active', 'unknown'],
-  publication: ['normal'],
+  publication: ['normal', 'out_of_scope'],
   categories: [],
   includeSubcategories: true,
   museumCategories: [],
@@ -110,6 +110,12 @@ const operationalLabels: Record<OperationalStatus, string> = {
   suspended: '休止中',
   closed: '閉館済み',
   unknown: '現況未確認',
+}
+
+const publicationLabels: Record<PublicationStatus, string> = {
+  normal: '通常掲載',
+  hold: '保留',
+  out_of_scope: '掲載対象外（開発用）',
 }
 
 const museumCategoryValues: MuseumCategory[] = ['registered_museum', 'designated_facility', 'museum_like_candidate']
@@ -141,7 +147,8 @@ function getCategoryGroup(facility: Facility): CategoryGroup {
 }
 
 function getPublicationStatus(facility: Facility): PublicationStatus {
-  return facility.publication_status === 'hold' ? 'hold' : 'normal'
+  return facility.publication_status === 'hold' || facility.publication_status === 'out_of_scope'
+    ? facility.publication_status : 'normal'
 }
 
 function todayInTokyo() {
@@ -365,7 +372,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   }
   const top = document.createElement('div')
   top.className = 'popup-topline'
-  top.textContent = displayCategories(facility).join('｜')
+  top.textContent = [...displayCategories(facility), ...(getPublicationStatus(facility) === 'out_of_scope' ? ['掲載対象外'] : [])].join('｜')
   const title = document.createElement('strong')
   title.className = 'popup-title'
   title.textContent = facility.name
@@ -819,7 +826,6 @@ function FilterPanel({ draft, onChange, onClose, onApply }: {
   onClose: () => void
   onApply: () => void
 }) {
-  const publicationLabels: Record<PublicationStatus, string> = { normal: '通常掲載', hold: '保留' }
   const visitLabels: Record<VisitFilter, string> = { any: '指定なし', open_now: '今開いている', open_today: '本日開館' }
   const exhibitionLabels: Record<ExhibitionFilter, string> = {
     any: '指定なし', ongoing: '開催中', starts_30: '今後30日以内に開始', ends_14: '今後14日以内に終了', on_date: '指定日に開催',
@@ -829,7 +835,7 @@ function FilterPanel({ draft, onChange, onClose, onApply }: {
       <header><div><small>表示条件を編集</small><h2>フィルター</h2></div><Button onClick={onClose} aria-label="閉じる"><Icon name="close" /></Button></header>
       <div className="filter-scroll">
         <section><h3>運営状態 <small>複数選択</small></h3><CheckboxGroup values={['active', 'suspended', 'closed', 'unknown']} selected={draft.operational} labels={operationalLabels} onChange={operational => onChange({ ...draft, operational })} /></section>
-        <section><h3>掲載確認状態 <small>複数選択</small></h3><CheckboxGroup values={['normal', 'hold']} selected={draft.publication} labels={publicationLabels} onChange={publication => onChange({ ...draft, publication })} /></section>
+        <section><h3>掲載状態 <small>複数選択</small></h3><CheckboxGroup values={['normal', 'hold', 'out_of_scope']} selected={draft.publication} labels={publicationLabels} onChange={publication => onChange({ ...draft, publication })} /><p className="filter-help">開発中の確認用に、掲載対象外の施設も表示できます。運営状態とは別の条件です。</p></section>
         <section><h3>カテゴリ <small>複数選択</small></h3><CheckboxGroup values={categoryGroups} selected={draft.categories} labels={categoryLabels} onChange={categories => onChange({ ...draft, categories })} /><label className="filter-subcategory-option"><input type="checkbox" checked={draft.includeSubcategories} onChange={event => onChange({ ...draft, includeSubcategories: event.target.checked })} /><span aria-hidden="true">{draft.includeSubcategories ? '✓' : ''}</span><span><b>サブカテゴリも含める</b><small>オフにすると主カテゴリだけで絞り込みます</small></span></label></section>
         <section><h3>博物館区分 <small>複数選択</small></h3><CheckboxGroup values={museumCategoryValues} selected={draft.museumCategories} labels={museumCategoryLabels} onChange={museumCategories => onChange({ ...draft, museumCategories })} /><p className="filter-help">登録博物館・指定施設は文化庁名簿による区分です。それ以外は情報源を問わず博物館類似施設の候補として表示し、制度上の区分を確定したものではありません。</p></section>
         <section><h3>本日の訪問条件 <small>単一選択</small></h3><RadioGroup values={['any', 'open_now', 'open_today']} selected={draft.visit} labels={visitLabels} onChange={visit => onChange({ ...draft, visit })} /><p className="filter-help">現在日時で安全に判定できる営業時間データのみ対象にします。</p></section>
@@ -864,7 +870,7 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
     }}>
       {facility.image_url && <img src={facility.image_url} alt="" />}
       <div className="list-card-classifications">
-        <div className="list-card-meta"><span className={`category-symbol category-${getCategoryGroup(facility)}`} style={categoryStyle(getCategoryGroup(facility))}>{categorySymbols[getCategoryGroup(facility)]}</span><span>{categories}</span></div>
+        <div className="list-card-meta"><span className={`category-symbol category-${getCategoryGroup(facility)}`} style={categoryStyle(getCategoryGroup(facility))}>{categorySymbols[getCategoryGroup(facility)]}</span><span>{categories}{getPublicationStatus(facility) === 'out_of_scope' && '｜掲載対象外'}</span></div>
         <div className="list-museum-categories">{displayMuseumCategories(facility).map(category => <span key={category}>{category}</span>)}</div>
       </div>
       <h3><button className="list-card-title" onClick={onSelect} aria-pressed={selected}>{facility.name}</button><span className="list-card-arrow" aria-hidden="true">›</span></h3>
@@ -1063,7 +1069,7 @@ function App() {
     })
     if (!sameValues(filters.publication, INITIAL_FILTERS.publication)) chips.push({
       key: 'publication',
-      label: `掲載: ${filters.publication.map(value => value === 'normal' ? '通常掲載' : '保留').join('・') || 'すべて'}`,
+      label: `掲載: ${filters.publication.map(value => publicationLabels[value]).join('・') || 'すべて'}`,
       remove: () => setFilters(current => ({ ...current, publication: [...INITIAL_FILTERS.publication] })),
     })
     filters.categories.forEach(value => chips.push({ key: `c-${value}`, label: categoryLabels[value], remove: () => setFilters(current => ({ ...current, categories: current.categories.filter(item => item !== value) })) }))
