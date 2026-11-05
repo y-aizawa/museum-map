@@ -250,7 +250,7 @@ function scheduleDisplay(facility: Facility): ScheduleDisplay {
     const lines = structured.weekly.map(rule => `${weeklyDayLabel(rule, days)} ${weeklyRuleTime(rule)}`)
     const week = Math.ceil(Number(date.slice(-2)) / 7)
     const todayRules = structured.weekly.filter(rule => rule.days.includes(weekdayCodeInTokyo()) && (!rule.weeks?.length || rule.weeks.includes(week)))
-    const today = todayRules.length ? todayRules.map(rule => `${rule.open}–${rule.close}`).join('／') : '通常休館日'
+    const today = todayRules.length ? todayRules.map(rule => `${rule.open}–${rule.close}`).join('／') : '休館日'
     const closed = facility.schedule_summary.split(/[。]/).filter(clause => /休館|休園|定休/.test(clause)).join('。')
     return { today, regular: lines.length <= 2 ? lines.join('／') : lines[0] + ' ほか', closed: closed || '—', details: [...lines, structured.holiday_rule || ''].filter(Boolean).join('\n') }
   }
@@ -407,7 +407,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   hoursBox.className = 'popup-hours-box'
   const todayHours = document.createElement('strong')
   todayHours.className = 'popup-today-hours'
-  if (openingPlan && inactive) todayHours.classList.add('popup-status-with-plan')
+  if (inactive) todayHours.classList.add('popup-facility-status')
   todayHours.textContent = facility.operational_status === 'closed' ? '閉館済み'
     : facility.operational_status === 'suspended' ? '休館中'
     : openingPlan ? openingPlanDate(openingPlan)
