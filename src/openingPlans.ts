@@ -32,3 +32,7 @@ export function openingPlanDate(plan: OpeningPlan) {
   }
   return plan.period || ''
 }
+
+export function openingPlanText(plan: OpeningPlan) {
+  return `${openingPlanDate(plan)} ${plan.kind === 'opening' ? '開館予定' : '再開予定'}`
+}

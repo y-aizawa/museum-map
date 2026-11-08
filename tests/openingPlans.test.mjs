@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { getOpeningPlan, matchesOperationalFilters, openingPlanDate } from '../src/openingPlans.ts'
+import { getOpeningPlan, matchesOperationalFilters, openingPlanDate, openingPlanText } from '../src/openingPlans.ts'
 
 const defaults = ['active']
 const opening = { operational_status: 'unknown', opening_plan: { kind: 'opening', period: '2027年春' } }
@@ -46,4 +46,9 @@ test('unconfirmed facilities share the open filter without appearing under closu
   const facility = { operational_status: 'unknown' }
   assert.equal(matchesOperationalFilters(facility, ['active'], false), true)
   assert.equal(matchesOperationalFilters(facility, ['suspended', 'closed'], false), false)
+})
+
+test('opening and reopening use the same date-plus-plan order as closure notices', () => {
+  assert.equal(openingPlanText(opening.opening_plan), '2027年春 開館予定')
+  assert.equal(openingPlanText(reopening.opening_plan), '2027年4月23日 再開予定')
 })

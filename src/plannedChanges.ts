@@ -5,8 +5,6 @@ export type PlannedChange = {
   reopening_date?: string
   last_public_open_date?: string
   function_transfer?: boolean
-  source_urls: string[]
-  checked_on: string
 }
 
 export function plannedChangeDate(value: string) {
@@ -17,11 +15,13 @@ export function plannedChangeDate(value: string) {
   return value
 }
 
-// Dates are notice metadata, never a clock-driven operational-status change.
+// Dates describe announcements, never a clock-driven operational-status change.
 export function plannedChangeDisplay(plan: PlannedChange, today: string) {
   const label = plan.kind === 'closure' ? '閉館予定' : '休館予定'
   const when = plannedChangeDate(plan.date || plan.period || '時期未定')
   const timing = `${when}${plan.kind === 'suspension' && plan.date ? 'から' : ''}`
+  const lines = [`${timing} ${label}`]
+  if (plan.reopening_date) lines.push(`${plannedChangeDate(plan.reopening_date)} 再開予定`)
   const details: string[] = []
   if (plan.function_transfer) details.push('機能移転を予定しています。')
   if (plan.kind === 'closure') {
@@ -29,57 +29,33 @@ export function plannedChangeDisplay(plan: PlannedChange, today: string) {
       ? `最終公開日：${plannedChangeDate(plan.last_public_open_date)}`
       : '最終公開日は未確定です。')
   }
-  if (plan.reopening_date) details.push(`${plannedChangeDate(plan.reopening_date)} 再開予定`)
-  // An exact date has arrived, or an entire month/year has elapsed. Free-form
-  // periods keep their original precision and are never converted to a day.
+  // Free-form periods keep their original precision, without guessing a day.
   const due = plan.date ? plan.date <= today
     : /^\d{4}-\d{2}$/.test(plan.period || '') ? plan.period! < today.slice(0, 7)
     : /^\d{4}$/.test(plan.period || '') ? plan.period! < today.slice(0, 4)
     : false
   const statusNote = due ? '公表された予定です。実施状況は公式案内をご確認ください。' : ''
-  return { label, timing, details, statusNote }
+  return { label, timing, lines, details, statusNote }
 }
 
-export function appendPlannedChanges(root: HTMLElement, plans: PlannedChange[], today: string) {
-  if (!plans.length) return
-  const section = document.createElement('section')
-  section.className = 'popup-planned-changes'
-  const heading = document.createElement('h3')
-  heading.textContent = '閉館・休館の予定'
-  section.append(heading)
+// Opening, reopening, suspension and closure plans share the same presentation.
+export function appendPlanLines(hoursBox: HTMLElement, lines: string[]) {
+  lines.forEach(text => {
+    const line = document.createElement('span')
+    line.className = 'popup-status-detail'
+    line.textContent = text
+    hoursBox.append(line)
+  })
+}
+
+export function appendPlannedChangeNotes(root: HTMLElement, plans: PlannedChange[], today: string) {
   plans.forEach(plan => {
     const display = plannedChangeDisplay(plan, today)
-    const card = document.createElement('div')
-    card.className = 'planned-change-notice'
-    const title = document.createElement('strong')
-    title.textContent = `${display.timing} ${display.label}`
-    card.append(title)
-    display.details.forEach(text => {
-      const detail = document.createElement('p')
-      detail.textContent = text
-      card.append(detail)
-    })
-    if (display.statusNote) {
-      const status = document.createElement('p')
-      status.className = 'planned-change-status-note'
-      status.textContent = display.statusNote
-      card.append(status)
-    }
-    const sources = document.createElement('div')
-    sources.className = 'planned-change-sources'
-    plan.source_urls.forEach((url, index) => {
-      const link = document.createElement('a')
-      link.href = url
-      link.target = '_blank'
-      link.rel = 'noopener noreferrer'
-      link.textContent = plan.source_urls.length === 1 ? '公式の予定案内' : `公式資料${index + 1}`
-      sources.append(link)
-    })
-    const checked = document.createElement('small')
-    checked.textContent = `${plannedChangeDate(plan.checked_on)}確認`
-    sources.append(checked)
-    card.append(sources)
-    section.append(card)
+    const notes = [...display.details, display.statusNote].filter(Boolean)
+    if (!notes.length) return
+    const note = document.createElement('div')
+    note.className = 'popup-notice popup-plan-note'
+    note.textContent = notes.join(' ')
+    root.append(note)
   })
-  root.append(section)
 }
