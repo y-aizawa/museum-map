@@ -293,6 +293,7 @@ function conditionTags(facility: Facility) {
   if (facility.operational_status === 'closed' || facility.operational_status === 'suspended') return []
   const labels: Record<string, string> = {
     required: '要予約',
+    required_group_only: '申込制・団体のみ受付',
     'not_required_up_to_15;required_16_or_more': '16名以上は要予約',
     required_group_children_only: '子ども団体は要予約',
     group_visit_requires_inquiry: '団体利用は要問合せ',
