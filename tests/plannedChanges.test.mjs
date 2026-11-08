@@ -29,7 +29,7 @@ test('passing a plan date asks for current confirmation instead of asserting clo
 })
 
 test('a planned closure does not become an opening plan or change current filter visibility', () => {
-  for (const operational_status of ['active', 'unknown']) {
+  for (const operational_status of ['active']) {
     const facility = { operational_status, planned_changes: [closure, suspension] }
     const original = structuredClone(facility)
     assert.equal(getOpeningPlan(facility), null)

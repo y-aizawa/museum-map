@@ -17,7 +17,7 @@ import type { GoogleMapsReview } from './googleMaps'
 import categoryDefinitions from './data/categories.json'
 import { SAMPLE_EXHIBITIONS_BY_FACILITY, SHOW_SAMPLE_EXHIBITIONS } from './data/sampleExhibitions'
 
-type OperationalStatus = 'active' | 'suspended' | 'closed' | 'unknown'
+type OperationalStatus = 'active' | 'suspended' | 'closed'
 type PublicationStatus = 'normal' | 'hold' | 'out_of_scope'
 type CategoryGroup = 'art' | 'history' | 'science' | 'industry' | 'transport' | 'literature' | 'manga' | 'performing' | 'sports' | 'zoo' | 'aquarium' | 'botanical' | 'other'
 type MuseumCategory = 'registered_museum' | 'designated_facility' | 'museum_like_candidate'
@@ -65,6 +65,7 @@ type Facility = {
   latitude: number
   longitude: number
   official_url: string
+  visitor_guide?: { url: string; label: string }
   google_maps?: GoogleMapsReview
   publication_status?: PublicationStatus
   special_exhibitions?: Exhibition[]
@@ -129,7 +130,6 @@ const operationalLabels: Record<OperationalStatus, string> = {
   active: '開館',
   suspended: '休館中',
   closed: '閉館済み',
-  unknown: '開館',
 }
 
 const publicationLabels: Record<PublicationStatus, string> = {
@@ -317,7 +317,6 @@ function formatExhibitionPeriod(exhibition: Exhibition) {
 
 function publicNotice(facility: Facility) {
   if (facility.operational_status === 'closed') return ''
-  if (facility.operational_status === 'unknown') return ''
   if (facility.operational_status === 'suspended') {
     const note = facility.status_note
     if (/保存修理工事/.test(note)) return '保存修理工事のため'

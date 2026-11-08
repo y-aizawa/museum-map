@@ -3,10 +3,10 @@ import test from 'node:test'
 import { getOpeningPlan, matchesOperationalFilters, openingPlanDate, openingPlanText } from '../src/openingPlans.ts'
 
 const defaults = ['active']
-const opening = { operational_status: 'unknown', opening_plan: { kind: 'opening', period: '2027年春' } }
+const opening = { operational_status: 'active', opening_plan: { kind: 'opening', period: '2027年春' } }
 const reopening = { operational_status: 'suspended', opening_plan: { kind: 'reopening', date: '2027-04-23' } }
 
-test('an announced first opening stays out of default unknown facilities', () => {
+test('an announced first opening stays out of default facilities', () => {
   assert.equal(matchesOperationalFilters(opening, defaults, false), false)
   assert.equal(matchesOperationalFilters(opening, defaults, true), true)
 })
@@ -23,8 +23,8 @@ test('explicit suspension selection includes both known and unknown reopening da
   assert.equal(matchesOperationalFilters({ operational_status: 'suspended' }, ['suspended'], false), true)
 })
 
-test('normal operating and unresolved facilities retain their previous default visibility', () => {
-  for (const operational_status of ['active', 'unknown']) {
+test('normal facilities retain their previous default visibility', () => {
+  for (const operational_status of ['active']) {
     assert.equal(matchesOperationalFilters({ operational_status }, defaults, false), true)
   }
 })
@@ -42,8 +42,8 @@ test('periods keep their precision while exact dates get Japanese formatting', (
   assert.equal(openingPlanDate(reopening.opening_plan), '2027年4月23日')
 })
 
-test('unconfirmed facilities share the open filter without appearing under closures', () => {
-  const facility = { operational_status: 'unknown' }
+test('normal facilities use the open filter without appearing under closures', () => {
+  const facility = { operational_status: 'active' }
   assert.equal(matchesOperationalFilters(facility, ['active'], false), true)
   assert.equal(matchesOperationalFilters(facility, ['suspended', 'closed'], false), false)
 })

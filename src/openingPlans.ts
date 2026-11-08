@@ -13,7 +13,7 @@ export function getOpeningPlan(facility: PlannedFacility): OpeningPlan | null {
   const plan = facility.opening_plan
   if (!plan || (!plan.date && !plan.period)) return null
   if (plan.kind === 'reopening' && facility.operational_status === 'suspended') return plan
-  if (plan.kind === 'opening' && ['unknown', 'suspended'].includes(facility.operational_status)) return plan
+  if (plan.kind === 'opening' && ['active', 'suspended'].includes(facility.operational_status)) return plan
   return null
 }
 
@@ -21,8 +21,7 @@ export function matchesOperationalFilters(facility: PlannedFacility, operational
   const plan = getOpeningPlan(facility)
   if (plan?.kind === 'opening') return includeOpeningPlans
   if (plan?.kind === 'reopening' && includeOpeningPlans) return true
-  const displayStatus = facility.operational_status === 'unknown' ? 'active' : facility.operational_status
-  return !operational.length || operational.includes(displayStatus)
+  return !operational.length || operational.includes(facility.operational_status)
 }
 
 export function openingPlanDate(plan: OpeningPlan) {
