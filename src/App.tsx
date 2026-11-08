@@ -7,6 +7,8 @@ import reviewBatches from './data/reviewBatches.json'
 import { reviewScope } from './reviewBatch'
 import { getOpeningPlan, matchesOperationalFilters, openingPlanText } from './openingPlans'
 import type { OpeningPlan } from './openingPlans'
+import { appendComponentScheduleNotes, currentComponentScheduleNotes } from './componentSchedule'
+import type { ComponentScheduleNote } from './componentSchedule'
 import { weeklyScheduleRows } from './weeklySchedule'
 import type { WeeklyScheduleRule } from './weeklySchedule'
 import { appendPlanLines, appendPlannedChangeNotes, plannedChangeDisplay } from './plannedChanges'
@@ -50,6 +52,7 @@ type Facility = {
   operational_status: OperationalStatus
   opening_plan?: OpeningPlan | null
   planned_changes?: PlannedChange[]
+  component_schedule_notes?: ComponentScheduleNote[]
   schedule_summary: string
   schedule_applicability: string
   schedule?: {
@@ -461,6 +464,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   if (!inactive && !openingPlan) scheduleElement.append(hoursHeading)
   scheduleElement.append(hoursBox)
   root.append(scheduleElement)
+  appendComponentScheduleNotes(root, currentComponentScheduleNotes(facility, todayInTokyo()))
   appendPlannedChangeNotes(root, facility.planned_changes || [], todayInTokyo())
   const tags = conditionTags(facility)
   if (tags.length) {
@@ -557,6 +561,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusReq
   const markersRef = useRef(new Map<string, Marker>())
   const popupRef = useRef<Popup | null>(null)
   const focusedRequest = useRef<SearchFocusRequest | null>(null)
+  const retryCamera = useRef<{ center: [number, number]; zoom: number } | null>(null)
   const [retry, setRetry] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -576,8 +581,8 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusReq
     const map = new MapLibreMap({
       container: containerRef.current,
       style: 'https://tiles.openfreemap.org/styles/positron',
-      center: [139.63, 35.68],
-      zoom: 9.25,
+      center: retryCamera.current?.center ?? [139.63, 35.68],
+      zoom: retryCamera.current?.zoom ?? 9.25,
       bearing: 0,
       pitch: 0,
       minZoom: 4,
@@ -597,17 +602,16 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusReq
     map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right')
     map.addControl(new AttributionControl({ compact: true, customAttribution: `<a href="${import.meta.env.BASE_URL}sources.html" target="_blank" rel="noopener noreferrer">施設データの出典</a>` }), 'bottom-left')
     mapRef.current = map
-    focusedRequest.current = null
+    if (!retryCamera.current) focusedRequest.current = null
     let styleReady = false
     let failureTimer = 0
     map.on('style.load', () => {
       styleReady = true
       window.clearTimeout(failureTimer)
       setLoading(false)
-      setError(false)
-      onErrorChange(false)
+      // A loaded style does not mean its tiles loaded successfully.
       const mainland = reviewMode ? facilities : facilities.filter(item => item.latitude > 34.8 && item.longitude > 138 && item.longitude < 141)
-      if (mainland.length) {
+      if (mainland.length && !retryCamera.current) {
         const bounds = mainland.reduce((value, item) => value.extend([item.longitude, item.latitude]), new LngLatBounds())
         const compact = window.matchMedia('(max-width: 760px)').matches
         map.fitBounds(bounds, { padding: { top: reviewMode ? 190 : compact ? 125 : 105, right: 65, bottom: compact ? 95 : 75, left: 65 }, maxZoom: 10, duration: 0 })
@@ -649,13 +653,13 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusReq
       popup?.remove()
       onSelect(null)
     })
-    map.on('error', event => {
-      const message = String(event.error?.message || '')
-      if (!styleReady && /style|fetch|worker/i.test(message)) {
-        setLoading(false)
-        setError(true)
-        onErrorChange(true)
-      }
+    // Tile/source errors may arrive after style.load. Keep the retry action
+    // available until an explicit retry; idle/areTilesLoaded also count failed
+    // tiles as settled and must not be mistaken for successful recovery.
+    map.on('error', () => {
+      setLoading(false)
+      setError(true)
+      onErrorChange(true)
     })
     failureTimer = window.setTimeout(() => {
       if (!styleReady) {
@@ -665,6 +669,10 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusReq
       }
     }, 12000)
     return () => {
+      if (styleReady) {
+        const center = map.getCenter()
+        retryCamera.current = { center: [center.lng, center.lat], zoom: map.getZoom() }
+      }
       window.clearTimeout(failureTimer)
       const popup = popupRef.current
       popupRef.current = null
@@ -737,7 +745,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusReq
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !selectedId) {
+    if (!map || loading || !selectedId) {
       markersRef.current.forEach(value => {
         value.getElement().classList.remove('selected')
         value.getElement().querySelector('.museum-pin')?.classList.remove('selected')
@@ -813,7 +821,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusReq
       map.off('resize', fitPopup)
       window.visualViewport?.removeEventListener('resize', fitPopup)
     }
-  }, [selectedId, temporaryId, items, mobile, onSelect])
+  }, [selectedId, temporaryId, items, mobile, onSelect, loading])
 
   useEffect(() => {
     const map = mapRef.current
@@ -832,8 +840,8 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusReq
       {error && (
         <div className="map-error" role="alert">
           <Icon name="info" size={24} />
-          <strong>地図を読み込めませんでした</strong>
-          <span>通信状態を確認して、もう一度お試しください。</span>
+          <strong>背景地図の一部または全部を読み込めませんでした</strong>
+          <span>施設情報は引き続き確認できます。通信状態を確認して再試行してください。</span>
           <Button onClick={() => setRetry(value => value + 1)}><Icon name="refresh" size={16} />再試行</Button>
         </div>
       )}
