@@ -98,7 +98,7 @@ const facilities = (dataset.facilities as Facility[]).map(facility => ({
 }))
 setWorkerUrl(new URL(`${import.meta.env.BASE_URL}maplibre-gl-worker.mjs`, window.location.href).toString())
 const INITIAL_FILTERS: Filters = {
-  operational: ['active', 'unknown'],
+  operational: ['active'],
   includeOpeningPlans: false,
   publication: ['normal'],
   categories: [],
@@ -111,10 +111,10 @@ const INITIAL_FILTERS: Filters = {
 const ALL_FILTERS: Filters = { operational: [], includeOpeningPlans: true, publication: [], categories: [], includeSubcategories: true, museumCategories: [], visit: 'any', exhibition: 'any', exhibitionDate: '' }
 
 const operationalLabels: Record<OperationalStatus, string> = {
-  active: '運営中',
-  suspended: '休止中',
+  active: '開館',
+  suspended: '休館中',
   closed: '閉館済み',
-  unknown: '現況未確認',
+  unknown: '開館',
 }
 
 const publicationLabels: Record<PublicationStatus, string> = {
@@ -855,8 +855,8 @@ function FilterPanel({ draft, onChange, onClose, onApply }: {
     <aside className="filter-panel" aria-label="施設フィルター">
       <header><div><small>表示条件を編集</small><h2>フィルター</h2></div><Button onClick={onClose} aria-label="閉じる"><Icon name="close" /></Button></header>
       <div className="filter-scroll">
-        <section><h3>運営状態 <small>複数選択</small></h3><CheckboxGroup values={['active', 'suspended', 'closed', 'unknown']} selected={draft.operational} labels={operationalLabels} onChange={operational => onChange({ ...draft, operational })} /><label className="opening-plan-toggle"><input type="checkbox" checked={draft.includeOpeningPlans} onChange={event => onChange({ ...draft, includeOpeningPlans: event.target.checked })} />開館・再開予定も表示</label><p className="filter-help">予定が公表されている館も表示します。通常の休館日・営業時間外とは別の条件です。</p></section>
-        <section><h3>掲載状態 <small>複数選択</small></h3><CheckboxGroup values={['normal', 'hold', 'out_of_scope']} selected={draft.publication} labels={publicationLabels} onChange={publication => onChange({ ...draft, publication })} /><p className="filter-help">開発中の確認用に、掲載対象外の施設も表示できます。運営状態とは別の条件です。</p></section>
+        <section><h3>施設の状態 <small>複数選択</small></h3><CheckboxGroup values={['active', 'suspended', 'closed']} selected={draft.operational} labels={operationalLabels} onChange={operational => onChange({ ...draft, operational })} /><label className="opening-plan-toggle"><input type="checkbox" checked={draft.includeOpeningPlans} onChange={event => onChange({ ...draft, includeOpeningPlans: event.target.checked })} />開館・再開予定も表示</label><p className="filter-help">予定が公表されている館も表示します。通常の休館日・営業時間外とは別の条件です。</p></section>
+        <section><h3>掲載状態 <small>複数選択</small></h3><CheckboxGroup values={['normal', 'hold', 'out_of_scope']} selected={draft.publication} labels={publicationLabels} onChange={publication => onChange({ ...draft, publication })} /><p className="filter-help">開発中の確認用に、掲載対象外の施設も表示できます。施設の状態とは別の条件です。</p></section>
         <section><h3>カテゴリ <small>複数選択</small></h3><CheckboxGroup values={categoryGroups} selected={draft.categories} labels={categoryLabels} onChange={categories => onChange({ ...draft, categories })} /><label className="filter-subcategory-option"><input type="checkbox" checked={draft.includeSubcategories} onChange={event => onChange({ ...draft, includeSubcategories: event.target.checked })} /><span aria-hidden="true">{draft.includeSubcategories ? '✓' : ''}</span><span><b>サブカテゴリも含める</b><small>オフにすると主カテゴリだけで絞り込みます</small></span></label></section>
         <section><h3>博物館区分 <small>複数選択</small></h3><CheckboxGroup values={museumCategoryValues} selected={draft.museumCategories} labels={museumCategoryLabels} onChange={museumCategories => onChange({ ...draft, museumCategories })} /><p className="filter-help">登録博物館・指定施設は文化庁名簿による区分です。それ以外は情報源を問わず博物館類似施設の候補として表示し、制度上の区分を確定したものではありません。</p></section>
         <section><h3>本日の訪問条件 <small>単一選択</small></h3><RadioGroup values={['any', 'open_now', 'open_today']} selected={draft.visit} labels={visitLabels} onChange={visit => onChange({ ...draft, visit })} /><p className="filter-help">現在日時で安全に判定できる営業時間データのみ対象にします。</p></section>
@@ -1089,7 +1089,7 @@ function App() {
     const chips: { key: string; label: string; remove: () => void }[] = []
     if (!sameValues(filters.operational, INITIAL_FILTERS.operational)) chips.push({
       key: 'operational',
-      label: `運営状態: ${filters.operational.map(value => operationalLabels[value]).join('・') || 'すべて'}`,
+      label: `施設の状態: ${filters.operational.map(value => operationalLabels[value]).join('・') || 'すべて'}`,
       remove: () => setFilters(current => ({ ...current, operational: [...INITIAL_FILTERS.operational] })),
     })
     if (filters.includeOpeningPlans) chips.push({ key: 'opening-plans', label: '開館・再開予定も表示', remove: () => setFilters(current => ({ ...current, includeOpeningPlans: false })) })

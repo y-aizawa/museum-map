@@ -21,7 +21,8 @@ export function matchesOperationalFilters(facility: PlannedFacility, operational
   const plan = getOpeningPlan(facility)
   if (plan?.kind === 'opening') return includeOpeningPlans
   if (plan?.kind === 'reopening' && includeOpeningPlans) return true
-  return !operational.length || operational.includes(facility.operational_status)
+  const displayStatus = facility.operational_status === 'unknown' ? 'active' : facility.operational_status
+  return !operational.length || operational.includes(displayStatus)
 }
 
 export function openingPlanDate(plan: OpeningPlan) {
