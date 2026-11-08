@@ -100,7 +100,7 @@ setWorkerUrl(new URL(`${import.meta.env.BASE_URL}maplibre-gl-worker.mjs`, window
 const INITIAL_FILTERS: Filters = {
   operational: ['active', 'unknown'],
   includeOpeningPlans: false,
-  publication: ['normal', 'out_of_scope'],
+  publication: ['normal'],
   categories: [],
   includeSubcategories: true,
   museumCategories: [],
