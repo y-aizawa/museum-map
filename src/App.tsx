@@ -3,6 +3,8 @@ import type { CSSProperties } from 'react'
 import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, NavigationControl, Popup, setWorkerUrl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import dataset from './data/museums.json'
+import reviewBatches from './data/reviewBatches.json'
+import { reviewScope } from './reviewBatch'
 import { getOpeningPlan, matchesOperationalFilters, openingPlanDate } from './openingPlans'
 import type { OpeningPlan } from './openingPlans'
 import categoryDefinitions from './data/categories.json'
@@ -90,7 +92,17 @@ function distanceKm(left: Coordinate, right: Coordinate) {
 
 type BoundsValue = { west: number; south: number; east: number; north: number; center: Coordinate }
 
-const facilities = (dataset.facilities as Facility[]).map(facility => ({
+const reviewId = new URLSearchParams(window.location.search).get('review')
+const reviewMode = reviewId !== null
+const review = reviewScope(dataset.facilities as Facility[], reviewId, reviewBatches)
+const normalMapUrl = new URL(window.location.href)
+normalMapUrl.searchParams.delete('review')
+const reviewNumbers = new Map(review.batch?.facility_ids.map((id, index) => [id, index + 1]))
+function facilityLabel(facility: Facility) {
+  const number = reviewNumbers.get(facility.id)
+  return number ? `${number}. ${facility.name}` : facility.name
+}
+const facilities = review.items.map(facility => ({
   ...facility,
   special_exhibitions: SHOW_SAMPLE_EXHIBITIONS
     ? [...(facility.special_exhibitions || []), ...(SAMPLE_EXHIBITIONS_BY_FACILITY[facility.name] || [])]
@@ -98,9 +110,9 @@ const facilities = (dataset.facilities as Facility[]).map(facility => ({
 }))
 setWorkerUrl(new URL(`${import.meta.env.BASE_URL}maplibre-gl-worker.mjs`, window.location.href).toString())
 const INITIAL_FILTERS: Filters = {
-  operational: ['active'],
-  includeOpeningPlans: false,
-  publication: ['normal'],
+  operational: reviewMode ? [] : ['active'],
+  includeOpeningPlans: reviewMode,
+  publication: reviewMode ? [] : ['normal'],
   categories: [],
   includeSubcategories: true,
   museumCategories: [],
@@ -379,7 +391,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   top.textContent = [...displayCategories(facility), ...(getPublicationStatus(facility) === 'out_of_scope' ? ['掲載対象外'] : [])].join('｜')
   const title = document.createElement('strong')
   title.className = 'popup-title'
-  title.textContent = facility.name
+  title.textContent = facilityLabel(facility)
   root.append(top)
   const museumCategories = displayMuseumCategories(facility)
   if (museumCategories.length) {
@@ -607,11 +619,11 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect
       setLoading(false)
       setError(false)
       onErrorChange(false)
-      const mainland = facilities.filter(item => item.latitude > 34.8 && item.longitude > 138 && item.longitude < 141)
+      const mainland = reviewMode ? facilities : facilities.filter(item => item.latitude > 34.8 && item.longitude > 138 && item.longitude < 141)
       if (mainland.length) {
         const bounds = mainland.reduce((value, item) => value.extend([item.longitude, item.latitude]), new LngLatBounds())
         const compact = window.matchMedia('(max-width: 760px)').matches
-        map.fitBounds(bounds, { padding: { top: compact ? 125 : 105, right: 65, bottom: compact ? 95 : 75, left: 65 }, maxZoom: 10, duration: 0 })
+        map.fitBounds(bounds, { padding: { top: reviewMode ? 190 : compact ? 125 : 105, right: 65, bottom: compact ? 95 : 75, left: 65 }, maxZoom: 10, duration: 0 })
       }
       const paint = (id: string, property: Parameters<MapLibreMap['setPaintProperty']>[1], value: string | number) => {
         if (map.getLayer(id)) map.setPaintProperty(id, property, value)
@@ -686,9 +698,11 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect
       element.className = 'museum-marker-anchor'
       const pin = document.createElement('button')
       pin.type = 'button'
+      const reviewNumber = reviewNumbers.get(facility.id)
+      if (reviewNumber) pin.dataset.reviewNumber = String(reviewNumber)
       pin.className = `museum-pin category-${getCategoryGroup(facility)}`
       pin.style.setProperty('--pin', categoryColors[getCategoryGroup(facility)])
-      pin.setAttribute('aria-label', `${facility.name}、${getOpeningPlan(facility)?.kind === 'opening' ? '開館予定' : operationalLabels[facility.operational_status]}`)
+      pin.setAttribute('aria-label', `${facilityLabel(facility)}、${getOpeningPlan(facility)?.kind === 'opening' ? '開館予定' : operationalLabels[facility.operational_status]}`)
       const symbol = document.createElement('span')
       symbol.textContent = categorySymbols[getCategoryGroup(facility)]
       pin.append(symbol)
@@ -891,7 +905,7 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
       if (!(event.target as HTMLElement).closest('a, button, details')) onSelect()
     }}>
       {facility.image_url && <img src={facility.image_url} alt="" />}
-      <h3><button className="list-card-title" onClick={onSelect} aria-pressed={selected}>{facility.name}</button><span className="list-card-arrow" aria-hidden="true">›</span></h3>
+      <h3><button className="list-card-title" onClick={onSelect} aria-pressed={selected}>{facilityLabel(facility)}</button><span className="list-card-arrow" aria-hidden="true">›</span></h3>
       <div className="list-card-classifications">
         <div className="list-card-meta"><span className={`category-symbol category-${getCategoryGroup(facility)}`} style={categoryStyle(getCategoryGroup(facility))}>{categorySymbols[getCategoryGroup(facility)]}</span><span>{categories}{getPublicationStatus(facility) === 'out_of_scope' && '｜掲載対象外'}</span></div>
         <div className="list-museum-categories">{displayMuseumCategories(facility).map(category => <span key={category}>{category}</span>)}</div>
@@ -1110,7 +1124,12 @@ function App() {
   const layoutKey = `${listOpen}-${sheetLevel}`
 
   return (
-    <main className={`app-shell ${listOpen && !mobile ? 'desktop-list-open' : ''}`}>
+    <main className={`app-shell ${reviewMode ? 'review-mode' : ''} ${listOpen && !mobile ? 'desktop-list-open' : ''}`}>
+      {reviewMode && <aside className="review-context" aria-label="確認用バッチ">
+        <strong>{review.error || `${review.batch?.label}：${facilities.length}館`}</strong>
+        <span>番号を指定して指摘できます。休館・保留・対象外も表示対象です。</span>
+        <a href={normalMapUrl.href}>通常のマップに戻る</a>
+      </aside>}
       <div className="top-bar">
         <div className="logo-panel"><span><Icon name="building" size={19} /></span><div><strong>TOKYO MUSEUM MAP</strong><small>東京のミュージアムを発見する</small></div></div>
         <div className="top-actions">
@@ -1118,7 +1137,7 @@ function App() {
             <Icon name="search" size={18} />
             <input value={query} onFocus={() => setSuggestionsOpen(true)} onChange={event => { setQuery(event.target.value); setSuggestionsOpen(true); if (!event.target.value) setTemporaryId(null) }} placeholder="施設名を検索" aria-label="施設名を検索" />
             {query && <Button onClick={() => { setQuery(''); setSuggestionsOpen(false); setTemporaryId(null) }} aria-label="検索を消去"><Icon name="close" size={15} /></Button>}
-            {suggestionsOpen && query && <div className="search-suggestions">{suggestions.length ? suggestions.map(item => <Button key={item.id} onClick={() => selectSearch(item)}><span className={`category-symbol category-${getCategoryGroup(item)}`} style={categoryStyle(getCategoryGroup(item))}>{categorySymbols[getCategoryGroup(item)]}</span><div><strong>{item.name}</strong>{item.aliases.length > 0 && <small>{item.aliases.join('・')}</small>}</div></Button>) : <p>一致する施設がありません</p>}</div>}
+            {suggestionsOpen && query && <div className="search-suggestions">{suggestions.length ? suggestions.map(item => <Button key={item.id} onClick={() => selectSearch(item)}><span className={`category-symbol category-${getCategoryGroup(item)}`} style={categoryStyle(getCategoryGroup(item))}>{categorySymbols[getCategoryGroup(item)]}</span><div><strong>{facilityLabel(item)}</strong>{item.aliases.length > 0 && <small>{item.aliases.join('・')}</small>}</div></Button>) : <p>一致する施設がありません</p>}</div>}
           </div>
           {!mobile && <Button className={`toolbar-button ${listOpen ? 'active' : ''}`} onClick={openList}><Icon name="list" size={18} />一覧 {listOpen ? listItems.length : currentRangeCount}件</Button>}
           <Button className={`toolbar-button ${activeChips.length ? 'active' : ''}`} onClick={openFilters}><Icon name="sliders" size={18} />フィルター{activeChips.length > 0 && <b>{activeChips.length}</b>}</Button>

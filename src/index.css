@@ -300,3 +300,17 @@ button, input { font: inherit; }
 .list-inactive .list-status-detail { color: inherit; font-size: 13px; font-weight: 600; }
 .list-inactive .list-status-reason { font-size: 11px; }
 .list-opening-plan > div { grid-template-columns: 48px minmax(0,1fr); }
+
+/* Temporary review links scope both the map and search to fixed facility IDs. */
+.review-context { position: fixed; top: 76px; left: 16px; z-index: 46; max-width: calc(100vw - 32px); display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 9px 12px; border: 1px solid #a7c7bf; border-radius: 10px; background: #f0f8f5; font-size: 11px; box-shadow: var(--shadow); }
+.review-context strong { width: 100%; }
+.review-context a { color: var(--brand-dark); text-decoration: underline; }
+.review-mode .active-chips { top: 146px; }
+@media (min-width: 761px) { .review-mode .facility-panel { top: 146px; } }
+@media (max-width: 760px) {
+  .review-context { top: 103px; left: 9px; max-width: calc(100vw - 18px); font-size: 10px; }
+  .review-mode .active-chips { top: 181px; }
+  .review-mode .facility-panel.sheet-level-2 { height: calc(100dvh - 220px - env(safe-area-inset-bottom)); }
+}
+
+.museum-pin[data-review-number]::after { content: attr(data-review-number); position: absolute; top: -9px; right: -9px; min-width: 21px; height: 21px; padding: 2px; border: 1px solid #126153; border-radius: 50%; color: #182824; background: white; font-size: 10px; font-weight: 700; line-height: 15px; }
