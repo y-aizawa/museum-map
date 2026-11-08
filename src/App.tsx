@@ -9,6 +9,8 @@ import { getOpeningPlan, matchesOperationalFilters, openingPlanDate } from './op
 import type { OpeningPlan } from './openingPlans'
 import { weeklyScheduleRows } from './weeklySchedule'
 import type { WeeklyScheduleRule } from './weeklySchedule'
+import { appendPlannedChanges, plannedChangeDisplay } from './plannedChanges'
+import type { PlannedChange } from './plannedChanges'
 import { googleMapsUrl } from './googleMaps'
 import type { GoogleMapsReview } from './googleMaps'
 import categoryDefinitions from './data/categories.json'
@@ -46,6 +48,7 @@ type Facility = {
   museum_categories: MuseumCategory[]
   operational_status: OperationalStatus
   opening_plan?: OpeningPlan | null
+  planned_changes?: PlannedChange[]
   schedule_summary: string
   schedule_applicability: string
   schedule?: {
@@ -464,6 +467,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   if (!inactive) scheduleElement.append(hoursHeading)
   scheduleElement.append(hoursBox)
   root.append(scheduleElement)
+  appendPlannedChanges(root, facility.planned_changes || [], todayInTokyo())
   const tags = conditionTags(facility)
   if (tags.length) {
     const tagRow = document.createElement('div')
@@ -938,6 +942,10 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
           {openingPlan && <span className="list-status-detail">｜{openingPlanDate(openingPlan)}再開予定</span>}
         </> : <div><span>{openingPlan ? '開館予定' : '本日'}</span><p>{openingPlan ? openingPlanDate(openingPlan) : schedule.today !== '—' ? schedule.today : '公式サイトでご確認ください'}</p></div>}
       </div>
+      {(facility.planned_changes || []).map((plan, index) => {
+        const display = plannedChangeDisplay(plan, todayInTokyo())
+        return <div className="list-planned-change" key={index}><strong>{display.timing} {display.label}</strong>{plan.reopening_date && <span>{display.details.find(detail => detail.includes('再開予定'))}</span>}{display.statusNote && <span>{display.statusNote}</span>}</div>
+      })}
       {notice && <div className={`list-notice ${facility.operational_status}`}>{notice}</div>}
       {exhibitions.slice(0, 2).map(item => <div className={`card-exhibition ${exhibitionPhase(item) === '開催予定' ? 'exhibition-upcoming' : 'exhibition-ongoing'} ${exhibitionFilter !== 'any' ? 'featured' : ''}`} key={item.title}><em>{exhibitionPhase(item) || '特別展'}{item.is_sample && <small>サンプル</small>}</em><b>{item.title}</b><span>会期：{formatExhibitionPeriod(item)}</span></div>)}
       {exhibitions.length > 2 && <Button className="list-exhibition-more" onClick={onSelect}>ほか{exhibitions.length - 2}件を詳細で見る</Button>}

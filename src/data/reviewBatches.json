@@ -124,5 +124,14 @@
       "facility:97c26f26960c685c",
       "facility:9040679c92bdb813"
     ]
+  },
+  {
+    "id": "2026-11-08-06",
+    "label": "既存館レビュー 2026-11-08-06",
+    "facility_ids": [
+      "facility:ea310e7abb11a744",
+      "facility:20b1b52349d84a9c",
+      "facility:d7541877b06960c7"
+    ]
   }
 ]
