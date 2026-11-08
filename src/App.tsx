@@ -12,6 +12,7 @@ import type { WeeklyScheduleRule } from './weeklySchedule'
 import { appendPlanLines, appendPlannedChangeNotes, plannedChangeDisplay } from './plannedChanges'
 import type { PlannedChange } from './plannedChanges'
 import { googleMapsUrl } from './googleMaps'
+import { createOfficialSiteAction, todayHoursText } from './officialSite'
 import type { GoogleMapsReview } from './googleMaps'
 import categoryDefinitions from './data/categories.json'
 import { SAMPLE_EXHIBITIONS_BY_FACILITY, SHOW_SAMPLE_EXHIBITIONS } from './data/sampleExhibitions'
@@ -420,7 +421,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   todayHours.textContent = facility.operational_status === 'closed' ? '閉館済み'
     : facility.operational_status === 'suspended' ? '休館中'
     : openingPlan ? '開館前'
-    : schedule.today !== '—' ? schedule.today : '公式サイトでご確認ください'
+    : todayHoursText(facility, schedule.today)
   if (schedule.today === '—' && !openingPlan && !inactive) todayHours.classList.add('popup-hours-message')
   hoursBox.append(todayHours)
   const planLines = [
@@ -529,14 +530,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   }
   const links = document.createElement('div')
   links.className = 'popup-links'
-  if (facility.official_url) {
-    const official = document.createElement('a')
-    official.href = facility.official_url
-    official.target = '_blank'
-    official.rel = 'noreferrer'
-    official.textContent = '公式サイト'
-    links.append(official)
-  }
+  links.append(createOfficialSiteAction(facility))
   const google = document.createElement('a')
   google.href = googleMapsUrl(facility)
   google.target = '_blank'
@@ -934,7 +928,7 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
       <div className={`list-schedule ${planLines.length ? 'list-with-plans' : ''} ${['suspended', 'closed'].includes(facility.operational_status) || openingPlan ? 'list-inactive' : ''}`}>
         {['suspended', 'closed'].includes(facility.operational_status) ? <p>{facility.operational_status === 'closed' ? '閉館済み' : '休館中'}</p>
           : openingPlan ? <p>開館前</p>
-          : <div><span>本日</span><p>{schedule.today !== '—' ? schedule.today : '公式サイトでご確認ください'}</p></div>}
+          : <div><span>本日</span><p>{todayHoursText(facility, schedule.today)}</p></div>}
         {planLines.map((line, index) => <span className="list-status-detail" key={index}>｜{line}</span>)}
       </div>
       {planDisplays.filter(plan => plan.statusNote).map((plan, index) => <div className="list-notice" key={index}>{plan.statusNote}</div>)}
