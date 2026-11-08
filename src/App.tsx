@@ -7,6 +7,8 @@ import reviewBatches from './data/reviewBatches.json'
 import { reviewScope } from './reviewBatch'
 import { getOpeningPlan, matchesOperationalFilters, openingPlanDate } from './openingPlans'
 import type { OpeningPlan } from './openingPlans'
+import { weeklyScheduleRows } from './weeklySchedule'
+import type { WeeklyScheduleRule } from './weeklySchedule'
 import categoryDefinitions from './data/categories.json'
 import { SAMPLE_EXHIBITIONS_BY_FACILITY, SHOW_SAMPLE_EXHIBITIONS } from './data/sampleExhibitions'
 
@@ -27,13 +29,7 @@ type Exhibition = {
   is_sample?: boolean
 }
 
-type WeeklyScheduleRule = {
-  days: string[]
-  weeks?: number[]
-  open: string
-  close: string
-  last_admission?: string
-}
+type SearchFocusRequest = { facilityId: string; sequence: number }
 
 type Facility = {
   id: string
@@ -441,7 +437,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   if (!inactive && (schedule.details || schedule.regular !== '—' || schedule.closed !== '—')) {
     const details = document.createElement('details')
     const summary = document.createElement('summary')
-    summary.textContent = '曜日別の時間・休館日'
+    summary.textContent = '曜日ごとの開館時間'
     const content = document.createElement('dl')
     const addRow = (label: string, value: string) => {
       if (!value || value === '—') return
@@ -452,14 +448,13 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
       content.append(key, valueElement)
     }
     const structured = facility.schedule
-    if (structured?.weekly?.length) {
-      const dayNames: Record<string, string> = { mo: '月', tu: '火', we: '水', th: '木', fr: '金', sa: '土', su: '日' }
-      structured.weekly.forEach(rule => {
-        addRow(weeklyDayLabel(rule, dayNames), `${rule.open}–${rule.close}`)
-        if (rule.last_admission) addRow('最終入館', rule.last_admission)
-      })
-      const closure = structured.holiday_rule || schedule.closed
-      if (closure && closure !== '—') addRow('休館日', closureDisplay(closure))
+    const weekdayRows = weeklyScheduleRows(structured, facility.schedule_applicability, todayInTokyo())
+    if (weekdayRows.length) {
+      content.className = 'popup-weekday-hours'
+      weekdayRows.forEach(row => addRow(row.day, row.text))
+      const closure = structured?.holiday_rule || schedule.closed
+      // Keep holiday substitutions, seasonal closures and other exceptions visible.
+      if (closure && closure !== '—') addRow('補足', closureDisplay(closure))
     } else {
       addRow('通常時間', schedule.regular)
       if (schedule.closed !== '—') addRow('休館日', closureDisplay(schedule.closed))
@@ -557,10 +552,11 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   return root
 }
 
-function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect, onBounds, onErrorChange }: {
+function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusRequest, onSelect, onBounds, onErrorChange }: {
   items: Facility[]
   selectedId: string | null
   temporaryId: string | null
+  focusRequest: SearchFocusRequest | null
   layoutKey: string
   mobile: boolean
   onSelect: (facility: Facility | null) => void
@@ -571,6 +567,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect
   const mapRef = useRef<MapLibreMap | null>(null)
   const markersRef = useRef(new Map<string, Marker>())
   const popupRef = useRef<Popup | null>(null)
+  const focusedRequest = useRef<SearchFocusRequest | null>(null)
   const [retry, setRetry] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -611,6 +608,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect
     map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right')
     map.addControl(new AttributionControl({ compact: true, customAttribution: `<a href="${import.meta.env.BASE_URL}sources.html" target="_blank" rel="noopener noreferrer">施設データの出典</a>` }), 'bottom-left')
     mapRef.current = map
+    focusedRequest.current = null
     let styleReady = false
     let failureTimer = 0
     map.on('style.load', () => {
@@ -722,6 +720,31 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, onSelect
       markersRef.current.set(facility.id, marker)
     })
   }, [items, loading, onSelect])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || loading || !focusRequest || focusRequest === focusedRequest.current
+      || selectedId !== focusRequest.facilityId) return
+    const facility = items.find(item => item.id === focusRequest.facilityId)
+    if (!facility) return
+    // Wait for the mobile details sheet / desktop list layout to settle.
+    const timer = window.setTimeout(() => {
+      map.resize()
+      const rect = map.getContainer().getBoundingClientRect()
+      let offsetY = 0
+      if (mobile) {
+        const top = Math.max(0, ...Array.from(document.querySelectorAll('.top-bar, .active-chips, .review-context'))
+          .map(element => element.getBoundingClientRect().bottom - rect.top)) + 24
+        const panel = document.querySelector('.facility-panel')?.getBoundingClientRect()
+        const bottom = Math.min(rect.height, panel ? panel.top - rect.top : rect.height) - 24
+        if (bottom > top) offsetY = (top + bottom) / 2 - rect.height / 2
+      }
+      focusedRequest.current = focusRequest
+      map.easeTo({ center: [facility.longitude, facility.latitude], zoom: Math.max(map.getZoom(), 15),
+        offset: [0, offsetY], duration: 650 })
+    }, 340)
+    return () => window.clearTimeout(timer)
+  }, [focusRequest, selectedId, loading, items, mobile])
 
   useEffect(() => {
     const map = mapRef.current
@@ -998,6 +1021,7 @@ function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectionOrigin, setSelectionOrigin] = useState<'map' | 'list' | 'search'>('map')
   const [temporaryId, setTemporaryId] = useState<string | null>(null)
+  const [focusRequest, setFocusRequest] = useState<SearchFocusRequest | null>(null)
   const [query, setQuery] = useState('')
   const [suggestionsOpen, setSuggestionsOpen] = useState(false)
   const [liveBounds, setLiveBounds] = useState<BoundsValue | null>(null)
@@ -1077,6 +1101,7 @@ function App() {
     setSelectedId(facility.id)
   }
   const selectSearch = (facility: Facility) => {
+    setFocusRequest(previous => ({ facilityId: facility.id, sequence: (previous?.sequence || 0) + 1 }))
     setSelectionOrigin('search')
     setQuery(facility.name)
     setSuggestionsOpen(false)
@@ -1137,7 +1162,7 @@ function App() {
             <Icon name="search" size={18} />
             <input value={query} onFocus={() => setSuggestionsOpen(true)} onChange={event => { setQuery(event.target.value); setSuggestionsOpen(true); if (!event.target.value) setTemporaryId(null) }} placeholder="施設名を検索" aria-label="施設名を検索" />
             {query && <Button onClick={() => { setQuery(''); setSuggestionsOpen(false); setTemporaryId(null) }} aria-label="検索を消去"><Icon name="close" size={15} /></Button>}
-            {suggestionsOpen && query && <div className="search-suggestions">{suggestions.length ? suggestions.map(item => <Button key={item.id} onClick={() => selectSearch(item)}><span className={`category-symbol category-${getCategoryGroup(item)}`} style={categoryStyle(getCategoryGroup(item))}>{categorySymbols[getCategoryGroup(item)]}</span><div><strong>{facilityLabel(item)}</strong>{item.aliases.length > 0 && <small>{item.aliases.join('・')}</small>}</div></Button>) : <p>一致する施設がありません</p>}</div>}
+            {suggestionsOpen && query && <div className="search-suggestions">{suggestions.length ? suggestions.map(item => <Button key={item.id} onClick={() => selectSearch(item)}><span className={`category-symbol category-${getCategoryGroup(item)}`} style={categoryStyle(getCategoryGroup(item))}>{categorySymbols[getCategoryGroup(item)]}</span><div><strong>{facilityLabel(item)}</strong></div></Button>) : <p>一致する施設がありません</p>}</div>}
           </div>
           {!mobile && <Button className={`toolbar-button ${listOpen ? 'active' : ''}`} onClick={openList}><Icon name="list" size={18} />一覧 {listOpen ? listItems.length : currentRangeCount}件</Button>}
           <Button className={`toolbar-button ${activeChips.length ? 'active' : ''}`} onClick={openFilters}><Icon name="sliders" size={18} />フィルター{activeChips.length > 0 && <b>{activeChips.length}</b>}</Button>
@@ -1146,7 +1171,7 @@ function App() {
       {activeChips.length > 0 && <div className="active-chips">{activeChips.map(chip => <Button key={chip.key} onClick={chip.remove}>{chip.label}<Icon name="close" size={12} /></Button>)}</div>}
 
       <section className="map-area">
-        <MapCanvas items={visible} selectedId={filterOpen ? null : selectedId} temporaryId={temporaryId} layoutKey={layoutKey} mobile={mobile} onSelect={handleSelect} onBounds={handleBounds} onErrorChange={handleMapError} />
+        <MapCanvas items={visible} selectedId={filterOpen ? null : selectedId} temporaryId={temporaryId} layoutKey={layoutKey} mobile={mobile} focusRequest={focusRequest} onSelect={handleSelect} onBounds={handleBounds} onErrorChange={handleMapError} />
         {!mapError && <svg className="map-center-target" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
           <path d="M12 4v16M4 12h16" stroke="white" strokeWidth="4" strokeLinecap="round" />
           <path d="M12 4v16M4 12h16" stroke="#687671" strokeWidth="1.5" strokeLinecap="round" />

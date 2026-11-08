@@ -46,7 +46,6 @@ button, input { font: inherit; }
 .search-suggestions > button { width: 100%; padding: 10px 12px; display: flex; align-items: center; gap: 9px; text-align: left; border-bottom: 1px solid #edf1ef; }
 .search-suggestions > button:hover { background: var(--brand-soft); }
 .search-suggestions strong { display: block; font-size: 11px; line-height: 1.4; }
-.search-suggestions small { display: block; margin-top: 2px; color: var(--muted); font-size: 8px; }
 .search-suggestions p { margin: 0; padding: 18px; color: var(--muted); text-align: center; font-size: 10px; }
 .toolbar-button { height: 46px; padding: 0 13px; display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 12px; white-space: nowrap; background: rgba(255,255,255,.97); box-shadow: 0 7px 24px rgba(23,48,42,.14); font-size: 11px; font-weight: 700; }
 .toolbar-button.active { color: var(--brand-dark); border-color: #8ab7ac; background: var(--brand-soft); }
@@ -314,3 +313,5 @@ button, input { font: inherit; }
 }
 
 .museum-pin[data-review-number]::after { content: attr(data-review-number); position: absolute; top: -9px; right: -9px; min-width: 21px; height: 21px; padding: 2px; border: 1px solid #126153; border-radius: 50%; color: #182824; background: white; font-size: 10px; font-weight: 700; line-height: 15px; }
+
+.popup-schedule dl.popup-weekday-hours { grid-template-columns: 32px minmax(0, 1fr); }

@@ -34,5 +34,41 @@
       "facility:1b0545f8f48fb931",
       "facility:5ac59a8096f54b34"
     ]
+  },
+  {
+    "id": "2026-11-08-02",
+    "label": "既存館レビュー 2026-11-08-02",
+    "facility_ids": [
+      "facility:40dede908248690a",
+      "facility:bfdd3d28d8756bbd",
+      "facility:6bd44a9e60bde7fd",
+      "facility:ce41858000da9023",
+      "facility:18ff38a3c01c9885",
+      "facility:59044f7e57d9a0be",
+      "facility:6382c2b726597a83",
+      "facility:7dbc1992b45cd435",
+      "facility:4a98c497742d8b43",
+      "facility:68531a7313618114",
+      "facility:f7af284585b84740",
+      "facility:248acf54d22ebebb",
+      "facility:71151252151ca929",
+      "facility:66ea6aeabe221eaf",
+      "facility:4f5c495798110169",
+      "facility:2e7dda1ef11eb75f",
+      "facility:510c81feab29e24e",
+      "facility:c9264440726e5ce3",
+      "facility:722010e54291a221",
+      "facility:d6a613275640f650",
+      "facility:56f4ba216dd18f93",
+      "facility:49665e3da818608b",
+      "facility:b3714157713fcd3d",
+      "facility:6a5801f7f06e8052",
+      "facility:3f5b135d615274f3",
+      "facility:69e5f5f54664561c",
+      "facility:6f4eaf5f1e9db305",
+      "facility:2702a4c2050445ca",
+      "facility:6e67a9cf827e4524",
+      "facility:866573cc408a7489"
+    ]
   }
 ]
