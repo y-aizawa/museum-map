@@ -9,6 +9,8 @@ import { getOpeningPlan, matchesOperationalFilters, openingPlanDate } from './op
 import type { OpeningPlan } from './openingPlans'
 import { weeklyScheduleRows } from './weeklySchedule'
 import type { WeeklyScheduleRule } from './weeklySchedule'
+import { googleMapsUrl } from './googleMaps'
+import type { GoogleMapsReview } from './googleMaps'
 import categoryDefinitions from './data/categories.json'
 import { SAMPLE_EXHIBITIONS_BY_FACILITY, SHOW_SAMPLE_EXHIBITIONS } from './data/sampleExhibitions'
 
@@ -59,6 +61,7 @@ type Facility = {
   latitude: number
   longitude: number
   official_url: string
+  google_maps?: GoogleMapsReview
   publication_status?: PublicationStatus
   special_exhibitions?: Exhibition[]
   image_url?: string
@@ -333,11 +336,6 @@ function exhibitionPhase(exhibition: Exhibition) {
   if (exhibition.start_date && exhibition.end_date && exhibition.start_date <= today && today <= exhibition.end_date) return '開催中'
   if (exhibition.start_date && exhibition.start_date > today) return '開催予定'
   return ''
-}
-
-function googleMapsUrl(facility: Facility) {
-  const query = [facility.name, facility.address, `${facility.latitude},${facility.longitude}`].filter(Boolean).join(' ')
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
 }
 
 function useIsMobile() {
