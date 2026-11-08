@@ -80,3 +80,11 @@ test('Kojima published guide preserves group-only admission without fixed openin
   assert.match(facility.schedule_summary, /申込制・団体のみ受付/)
   assert.doesNotMatch(facility.schedule_summary, /13:00|17:00/)
 })
+
+test('explicit official-site-only policy never promotes floor hours to whole-facility hours', () => {
+  const facility = { official_url: 'https://www.kyodonews.jp/company/', schedule_display: 'official_site_only' }
+  for (const today of ['—', '09:00–19:00', '休館日']) {
+    assert.equal(todayHoursText(facility, today), '開館時間は公式サイトでご確認ください')
+  }
+  assert.equal(todayHoursText({ official_url: facility.official_url }, '—'), '公式サイトでご確認ください')
+})

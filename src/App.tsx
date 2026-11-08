@@ -52,6 +52,7 @@ type Facility = {
   operational_status: OperationalStatus
   opening_plan?: OpeningPlan | null
   planned_changes?: PlannedChange[]
+  schedule_display?: 'official_site_only'
   component_schedule_notes?: ComponentScheduleNote[]
   schedule_summary: string
   schedule_applicability: string
@@ -257,7 +258,7 @@ function closureDisplay(value: string) {
 
 function scheduleDisplay(facility: Facility): ScheduleDisplay {
   const unavailable = Boolean(getOpeningPlan(facility)) || facility.operational_status === 'closed' || facility.operational_status === 'suspended'
-  if (unavailable) return { today: '—', regular: '—', closed: '—', details: '' }
+  if (unavailable || facility.schedule_display === 'official_site_only') return { today: '—', regular: '—', closed: '—', details: '' }
   const structured = facility.schedule
   const date = todayInTokyo()
   if (structured?.valid_from && date < structured.valid_from || structured?.valid_through && date > structured.valid_through) {

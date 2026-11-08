@@ -32,14 +32,14 @@ test('component scope and guidance render as text with no disclosure interaction
     assert.equal(root.children[0].tag, 'div')
   } finally { globalThis.document = previous }
 })
-test('News Art publishes only reviewed third-floor hours and keeps the whole facility unknown', async () => {
+test('News Art uses official-site confirmation without publishing individual floor hours', async () => {
   const payload = JSON.parse(await readFile(new URL('../public/facilities.json', import.meta.url), 'utf8'))
   const facility = payload.facilities.find(row => row.id === 'facility:8b5992f1046691c7')
   assert.equal(facility.schedule_applicability, 'unconfirmed')
   assert.equal(facility.schedule, null)
-  assert.deepEqual(facility.component_schedule_notes, [{
-    scope: '3階ギャラリーウオーク',
-    text: '平日9:00〜19:00、土日祝10:00〜18:00（無料）。他のフロアの公開時間は未確認です。',
-  }])
-  assert.equal(payload.facilities.filter(row => row.component_schedule_notes).length, 1)
+  assert.equal(facility.schedule_display, 'official_site_only')
+  assert.equal(facility.schedule_summary, '開館時間は公式サイトでご確認ください')
+  assert.equal(facility.component_schedule_notes, undefined)
+  assert.deepEqual(currentComponentScheduleNotes(facility, '2026-11-09'), [])
+  assert.deepEqual(currentComponentScheduleNotes({ ...facility, component_schedule_notes: [note] }, '2026-11-09'), [])
 })

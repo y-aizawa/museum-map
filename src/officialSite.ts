@@ -1,4 +1,4 @@
-type OfficialSiteFacility = { official_url?: string | null; visitor_guide?: { url: string; label: string } | null }
+type OfficialSiteFacility = { schedule_display?: 'official_site_only'; official_url?: string | null; visitor_guide?: { url: string; label: string } | null }
 
 function guide(facility: OfficialSiteFacility) {
   const entry = facility.visitor_guide
@@ -27,6 +27,7 @@ export function createOfficialSiteAction(facility: OfficialSiteFacility): HTMLAn
 
 // The fallback concerns today's hours, not the existence of an official site.
 export function todayHoursText(facility: OfficialSiteFacility, today: string): string {
+  if (facility.schedule_display === 'official_site_only' && facility.official_url?.trim()) return '開館時間は公式サイトでご確認ください'
   if (today !== '—') return today
   if (facility.official_url?.trim()) return '公式サイトでご確認ください'
   const fallback = guide(facility)

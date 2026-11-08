@@ -6,6 +6,7 @@ export type ComponentScheduleNote = {
 }
 
 type Facility = {
+  schedule_display?: 'official_site_only'
   operational_status: string
   opening_plan?: { kind: string } | null
   component_schedule_notes?: ComponentScheduleNote[]
@@ -13,6 +14,7 @@ type Facility = {
 
 // Component guidance is supplemental. Never promote it to facility-wide or today's hours.
 export function currentComponentScheduleNotes(facility: Facility, date: string): ComponentScheduleNote[] {
+  if (facility.schedule_display === 'official_site_only') return []
   if (facility.operational_status !== 'active' || facility.opening_plan) return []
   return (facility.component_schedule_notes || []).filter(note =>
     Boolean(note.scope.trim() && note.text.trim())
