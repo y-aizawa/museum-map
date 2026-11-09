@@ -1004,5 +1004,12 @@
     "facility_ids": [
       "facility:6fd78be734666f12"
     ]
+  },
+  {
+    "id": "2026-11-09-fuji-split",
+    "label": "富士フォトギャラリー銀座 分離追加",
+    "facility_ids": [
+      "facility:47b63ab7887d9907"
+    ]
   }
 ]
