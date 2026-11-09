@@ -3,6 +3,7 @@ export type GoogleMapsReview = {
   checked_on?: string
   url?: string
   place_id?: string
+  destination_scope?: 'facility' | 'building' | 'location'
 }
 
 type MapFacility = {
@@ -30,6 +31,8 @@ function safeMapsUrl(value: string | undefined) {
 
 export function googleMapsUrl(facility: MapFacility) {
   const review = facility.google_maps
+  // A known wrong/old destination must never fall back to the same name search.
+  if (review?.verification === 'blocked') return null
   if (review?.verification === 'verified') {
     if (review.url && safeMapsUrl(review.url)) return review.url
     if (review.place_id && /^[A-Za-z0-9_-]{1,256}$/.test(review.place_id)) {
@@ -39,4 +42,24 @@ export function googleMapsUrl(facility: MapFacility) {
   }
   const query = [facility.name, facility.address, `${facility.latitude},${facility.longitude}`].filter(Boolean).join(' ')
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+}
+
+// Link availability is independent of whether the facility is open or closed.
+export function createGoogleMapsAction(facility: MapFacility): HTMLAnchorElement | HTMLButtonElement {
+  const url = googleMapsUrl(facility)
+  if (url) {
+    const link = document.createElement('a')
+    link.href = url
+    link.target = '_blank'
+    link.rel = 'noreferrer'
+    link.textContent = facility.google_maps?.destination_scope === 'location' ? 'Googleマップ（所在地）'
+      : facility.google_maps?.destination_scope === 'building' ? 'Googleマップ（建物）'
+      : 'Googleマップで開く'
+    return link
+  }
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.disabled = true
+  button.textContent = 'Googleマップ確認中'
+  return button
 }

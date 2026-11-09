@@ -13,7 +13,7 @@ import { weeklyScheduleRows } from './weeklySchedule'
 import type { WeeklyScheduleRule } from './weeklySchedule'
 import { appendPlanLines, appendPlannedChangeNotes, plannedChangeDisplay } from './plannedChanges'
 import type { PlannedChange } from './plannedChanges'
-import { googleMapsUrl } from './googleMaps'
+import { createGoogleMapsAction } from './googleMaps'
 import { createOfficialSiteAction, todayHoursText } from './officialSite'
 import type { GoogleMapsReview } from './googleMaps'
 import categoryDefinitions from './data/categories.json'
@@ -536,12 +536,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   const links = document.createElement('div')
   links.className = 'popup-links'
   links.append(createOfficialSiteAction(facility))
-  const google = document.createElement('a')
-  google.href = googleMapsUrl(facility)
-  google.target = '_blank'
-  google.rel = 'noreferrer'
-  google.textContent = 'Googleマップで開く'
-  links.append(google)
+  links.append(createGoogleMapsAction(facility))
   root.append(links)
   return root
 }
