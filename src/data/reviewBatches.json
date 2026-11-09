@@ -1011,5 +1011,12 @@
     "facility_ids": [
       "facility:47b63ab7887d9907"
     ]
+  },
+  {
+    "id": "2026-11-10-ndl-gallery",
+    "label": "国立国会図書館ギャラリー追加",
+    "facility_ids": [
+      "facility:189daebd418c76f6"
+    ]
   }
 ]
