@@ -82,6 +82,7 @@ test('known wrong destinations never fall back, regardless of operating status',
       assert.equal(action.rel, 'noreferrer')
       assert.equal(createGoogleMapsAction({ ...item, google_maps: { verification: 'verified', url, destination_scope: 'building' } }).textContent, 'Googleマップ（建物）')
       assert.equal(createGoogleMapsAction({ ...item, google_maps: { verification: 'verified', url, destination_scope: 'location' } }).textContent, 'Googleマップ（所在地）')
+      assert.equal(createGoogleMapsAction({ ...item, google_maps: { verification: 'verified', url, destination_scope: 'historical_location' } }).textContent, 'Googleマップ（旧所在地）')
       assert.equal(createGoogleMapsAction({ ...item, google_maps: undefined }).href, original)
     }
     assert.equal(googleMapsUrl(reviewed({ verification: 'blocked', url, place_id: 'stale' })), null)
