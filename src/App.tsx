@@ -134,7 +134,7 @@ const operationalLabels: Record<OperationalStatus, string> = {
   active: '開館',
   suspended: '休館中',
   closed: '閉館済み',
-  unknown: '現況確認中',
+  unknown: '',
 }
 
 const publicationLabels: Record<PublicationStatus, string> = {
@@ -322,7 +322,6 @@ function formatExhibitionPeriod(exhibition: Exhibition) {
 }
 
 function publicNotice(facility: Facility) {
-  if (facility.operational_status === 'unknown') return facility.status_note || '現在の開閉館状況は確認中です。'
   if (facility.operational_status === 'closed') return ''
   if (facility.operational_status === 'suspended') {
     const note = facility.status_note
@@ -417,7 +416,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   scheduleElement.className = 'popup-schedule'
   const hoursHeading = document.createElement('h3')
   const openingPlan = getOpeningPlan(facility)
-  const inactive = facility.operational_status !== 'active'
+  const inactive = facility.operational_status === 'suspended' || facility.operational_status === 'closed'
   hoursHeading.textContent = '本日の開館時間'
   const hoursBox = document.createElement('div')
   hoursBox.className = 'popup-hours-box'
@@ -426,7 +425,6 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   if (inactive || openingPlan) todayHours.classList.add('popup-facility-status')
   todayHours.textContent = facility.operational_status === 'closed' ? '閉館済み'
     : facility.operational_status === 'suspended' ? '休館中'
-    : facility.operational_status === 'unknown' ? '現況確認中'
     : openingPlan ? '開館前'
     : todayHoursText(facility, schedule.today)
   if (schedule.today === '—' && !openingPlan && !inactive) todayHours.classList.add('popup-hours-message')
@@ -696,7 +694,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusReq
       if (reviewNumber) pin.dataset.reviewNumber = String(reviewNumber)
       pin.className = `museum-pin category-${getCategoryGroup(facility)}`
       pin.style.setProperty('--pin', categoryColors[getCategoryGroup(facility)])
-      pin.setAttribute('aria-label', `${facilityLabel(facility)}、${getOpeningPlan(facility)?.kind === 'opening' ? '開館予定' : operationalLabels[facility.operational_status]}`)
+      pin.setAttribute('aria-label', [facilityLabel(facility), getOpeningPlan(facility)?.kind === 'opening' ? '開館予定' : operationalLabels[facility.operational_status]].filter(Boolean).join('、'))
       const symbol = document.createElement('span')
       symbol.textContent = categorySymbols[getCategoryGroup(facility)]
       pin.append(symbol)
@@ -888,7 +886,7 @@ function FilterPanel({ draft, onChange, onClose, onApply }: {
     <aside className="filter-panel" aria-label="施設フィルター">
       <header><div><small>表示条件を編集</small><h2>フィルター</h2></div><Button onClick={onClose} aria-label="閉じる"><Icon name="close" /></Button></header>
       <div className="filter-scroll">
-        <section><h3>施設の状態 <small>複数選択</small></h3><CheckboxGroup values={['active', 'suspended', 'closed', 'unknown']} selected={draft.operational} labels={operationalLabels} onChange={operational => onChange({ ...draft, operational })} /><label className="opening-plan-toggle"><input type="checkbox" checked={draft.includeOpeningPlans} onChange={event => onChange({ ...draft, includeOpeningPlans: event.target.checked })} />開館・再開予定も表示</label><p className="filter-help">予定が公表されている館も表示します。通常の休館日・営業時間外とは別の条件です。</p></section>
+        <section><h3>施設の状態 <small>複数選択</small></h3><CheckboxGroup values={['active', 'suspended', 'closed']} selected={draft.operational} labels={operationalLabels} onChange={operational => onChange({ ...draft, operational })} /><label className="opening-plan-toggle"><input type="checkbox" checked={draft.includeOpeningPlans} onChange={event => onChange({ ...draft, includeOpeningPlans: event.target.checked })} />開館・再開予定も表示</label><p className="filter-help">予定が公表されている館も表示します。通常の休館日・営業時間外とは別の条件です。</p></section>
         <section><h3>掲載状態 <small>複数選択</small></h3><CheckboxGroup values={['normal', 'hold', 'out_of_scope']} selected={draft.publication} labels={publicationLabels} onChange={publication => onChange({ ...draft, publication })} /><p className="filter-help">開発中の確認用に、掲載対象外の施設も表示できます。施設の状態とは別の条件です。</p></section>
         <section><h3>カテゴリ <small>複数選択</small></h3><CheckboxGroup values={categoryGroups} selected={draft.categories} labels={categoryLabels} onChange={categories => onChange({ ...draft, categories })} /><label className="filter-subcategory-option"><input type="checkbox" checked={draft.includeSubcategories} onChange={event => onChange({ ...draft, includeSubcategories: event.target.checked })} /><span aria-hidden="true">{draft.includeSubcategories ? '✓' : ''}</span><span><b>サブカテゴリも含める</b><small>オフにすると主カテゴリだけで絞り込みます</small></span></label></section>
         <section><h3>博物館区分 <small>複数選択</small></h3><CheckboxGroup values={museumCategoryValues} selected={draft.museumCategories} labels={museumCategoryLabels} onChange={museumCategories => onChange({ ...draft, museumCategories })} /><p className="filter-help">登録博物館・指定施設は文化庁名簿による区分です。それ以外は情報源を問わず博物館類似施設の候補として表示し、制度上の区分を確定したものではありません。</p></section>
@@ -932,8 +930,8 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
         <div className="list-museum-categories">{displayMuseumCategories(facility).map(category => <span key={category}>{category}</span>)}</div>
       </div>
       {facility.address && <div className="list-card-address">{facility.address}</div>}
-      <div className={`list-schedule ${planLines.length ? 'list-with-plans' : ''} ${facility.operational_status !== 'active' || openingPlan ? 'list-inactive' : ''}`}>
-        {facility.operational_status !== 'active' ? <p>{operationalLabels[facility.operational_status]}</p>
+      <div className={`list-schedule ${planLines.length ? 'list-with-plans' : ''} ${['suspended', 'closed'].includes(facility.operational_status) || openingPlan ? 'list-inactive' : ''}`}>
+        {['suspended', 'closed'].includes(facility.operational_status) ? <p>{operationalLabels[facility.operational_status]}</p>
           : openingPlan ? <p>開館前</p>
           : <div><span>本日</span><p>{todayHoursText(facility, schedule.today)}</p></div>}
         {planLines.map((line, index) => <span className="list-status-detail" key={index}>｜{line}</span>)}

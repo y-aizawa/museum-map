@@ -12,11 +12,12 @@ test('unknown status is separate from open, closed and suspended filters', () =>
   assert.equal(matchesOperationalFilters(facility, [], false), true)
   assert.equal(getOpeningPlan({ ...facility, opening_plan: { kind: 'opening', date: '2027-01-01' } }), null)
 })
-test('unknown state has explicit list, detail, filter and accessible pin labels', () => {
-  assert.match(app, /unknown: '現況確認中'/)
-  assert.match(app, /values=\{\['active', 'suspended', 'closed', 'unknown'\]\}/)
-  assert.match(app, /facility.operational_status === 'unknown' \? '現況確認中'/)
-  assert.match(app, /<p>\{operationalLabels\[facility.operational_status\]\}<\/p>/)
-  assert.match(app, /const inactive = facility.operational_status !== 'active'/)
+test('unconfirmed records use normal missing-hours presentation without custom status UI', () => {
+  assert(!app.includes('現況確認中'))
+  assert.match(app, /values=\{\['active', 'suspended', 'closed'\]\}/)
+  assert(!app.includes("if (facility.operational_status === 'unknown') return facility.status_note"))
+  assert.match(app, /const inactive = facility.operational_status === 'suspended' \|\| facility.operational_status === 'closed'/)
+  assert.match(app, /: todayHoursText\(facility, schedule.today\)/)
+  assert.match(app, /const unavailable = Boolean\(getOpeningPlan\(facility\)\) \|\| facility.operational_status !== 'active'/)
   assert.match(app, /function conditionTags[\s\S]*?facility.operational_status !== 'active'\) return \[\]/)
 })
