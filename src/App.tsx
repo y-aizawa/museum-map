@@ -18,6 +18,7 @@ import { createOfficialSiteAction, todayHoursText } from './officialSite'
 import type { GoogleMapsReview } from './googleMaps'
 import categoryDefinitions from './data/categories.json'
 import { SAMPLE_EXHIBITIONS_BY_FACILITY, SHOW_SAMPLE_EXHIBITIONS } from './data/sampleExhibitions'
+import { facilityPrefecture, prefectureRegions } from './prefectures'
 
 type OperationalStatus = 'active' | 'suspended' | 'closed' | 'unknown'
 type PublicationStatus = 'normal' | 'hold' | 'out_of_scope'
@@ -66,6 +67,7 @@ type Facility = {
   reservation: string
   status_note: string
   address: string
+  prefecture?: string | null
   latitude: number
   longitude: number
   official_url: string
@@ -77,6 +79,7 @@ type Facility = {
 }
 
 type Filters = {
+  prefecture: string
   operational: OperationalStatus[]
   includeOpeningPlans: boolean
   publication: PublicationStatus[]
@@ -112,12 +115,19 @@ function facilityLabel(facility: Facility) {
 }
 const facilities = review.items.map(facility => ({
   ...facility,
+  prefecture: facilityPrefecture(facility),
   special_exhibitions: SHOW_SAMPLE_EXHIBITIONS
     ? [...(facility.special_exhibitions || []), ...(SAMPLE_EXHIBITIONS_BY_FACILITY[facility.name] || [])]
     : facility.special_exhibitions,
 }))
+const availablePrefectures = new Set(facilities.map(facility => facility.prefecture).filter(Boolean))
+const availablePrefectureRegions = prefectureRegions.map(region => ({
+  name: region.name,
+  prefectures: region.prefectures.filter(prefecture => availablePrefectures.has(prefecture)),
+})).filter(region => region.prefectures.length > 0)
 setWorkerUrl(new URL(`${import.meta.env.BASE_URL}maplibre-gl-worker.mjs`, window.location.href).toString())
 const INITIAL_FILTERS: Filters = {
+  prefecture: '',
   operational: reviewMode ? [] : ['active'],
   includeOpeningPlans: reviewMode,
   publication: reviewMode ? [] : ['normal'],
@@ -128,7 +138,7 @@ const INITIAL_FILTERS: Filters = {
   exhibition: 'any',
   exhibitionDate: '',
 }
-const ALL_FILTERS: Filters = { operational: [], includeOpeningPlans: true, publication: [], categories: [], includeSubcategories: true, museumCategories: [], visit: 'any', exhibition: 'any', exhibitionDate: '' }
+const ALL_FILTERS: Filters = { ...INITIAL_FILTERS, operational: [], includeOpeningPlans: true, publication: [] }
 
 const operationalLabels: Record<OperationalStatus, string> = {
   active: '開館',
@@ -215,6 +225,7 @@ function exhibitionMatches(facility: Facility, filter: ExhibitionFilter, date: s
 }
 
 function matchesFilters(facility: Facility, filters: Filters) {
+  if (filters.prefecture && facility.prefecture !== filters.prefecture) return false
   if (!matchesOperationalFilters(facility, filters.operational, filters.includeOpeningPlans)) return false
   if (filters.visit !== 'any' && getOpeningPlan(facility)) return false
   if (filters.publication.length && !filters.publication.includes(getPublicationStatus(facility))) return false
@@ -542,8 +553,9 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   return root
 }
 
-function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusRequest, onSelect, onBounds, onErrorChange }: {
+function MapCanvas({ items, prefecture, selectedId, temporaryId, layoutKey, mobile, focusRequest, onSelect, onBounds, onPrefectureFit, onErrorChange }: {
   items: Facility[]
+  prefecture: string
   selectedId: string | null
   temporaryId: string | null
   focusRequest: SearchFocusRequest | null
@@ -551,6 +563,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusReq
   mobile: boolean
   onSelect: (facility: Facility | null) => void
   onBounds: (bounds: BoundsValue) => void
+  onPrefectureFit: () => void
   onErrorChange: (error: boolean) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -558,6 +571,7 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusReq
   const markersRef = useRef(new Map<string, Marker>())
   const popupRef = useRef<Popup | null>(null)
   const focusedRequest = useRef<SearchFocusRequest | null>(null)
+  const fittedPrefecture = useRef('')
   const retryCamera = useRef<{ center: [number, number]; zoom: number } | null>(null)
   const [retry, setRetry] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -679,6 +693,18 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusReq
       mapRef.current = null
     }
   }, [retry, onSelect, onErrorChange, publishBounds])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || loading || fittedPrefecture.current === prefecture) return
+    fittedPrefecture.current = prefecture
+    if (!prefecture || !items.length) return
+
+    const bounds = items.reduce((value, item) => value.extend([item.longitude, item.latitude]), new LngLatBounds())
+    map.fitBounds(bounds, { padding: { top: reviewMode ? 190 : 125, right: 65, bottom: 95, left: 65 }, maxZoom: 12, duration: 0 })
+    publishBounds()
+    onPrefectureFit()
+  }, [items, loading, onPrefectureFit, prefecture, publishBounds])
 
   useEffect(() => {
     const map = mapRef.current
@@ -886,6 +912,15 @@ function FilterPanel({ draft, onChange, onClose, onApply }: {
     <aside className="filter-panel" aria-label="施設フィルター">
       <header><div><small>表示条件を編集</small><h2>フィルター</h2></div><Button onClick={onClose} aria-label="閉じる"><Icon name="close" /></Button></header>
       <div className="filter-scroll">
+        {availablePrefectureRegions.length > 0 && <section>
+          <h3><label htmlFor="prefecture-filter">都道府県</label></h3>
+          <select id="prefecture-filter" className="prefecture-select" value={draft.prefecture} onChange={event => onChange({ ...draft, prefecture: event.target.value })}>
+            <option value="">すべての都道府県</option>
+            {availablePrefectureRegions.map(region => <optgroup key={region.name} label={region.name}>
+              {region.prefectures.map(prefecture => <option key={prefecture} value={prefecture}>{prefecture}</option>)}
+            </optgroup>)}
+          </select>
+        </section>}
         <section><h3>施設の状態 <small>複数選択</small></h3><CheckboxGroup values={['active', 'suspended', 'closed']} selected={draft.operational} labels={operationalLabels} onChange={operational => onChange({ ...draft, operational })} /><label className="opening-plan-toggle"><input type="checkbox" checked={draft.includeOpeningPlans} onChange={event => onChange({ ...draft, includeOpeningPlans: event.target.checked })} />開館・再開予定も表示</label><p className="filter-help">予定が公表されている館も表示します。通常の休館日・営業時間外とは別の条件です。</p></section>
         <section><h3>掲載状態 <small>複数選択</small></h3><CheckboxGroup values={['normal', 'hold', 'out_of_scope']} selected={draft.publication} labels={publicationLabels} onChange={publication => onChange({ ...draft, publication })} /><p className="filter-help">開発中の確認用に、掲載対象外の施設も表示できます。施設の状態とは別の条件です。</p></section>
         <section><h3>カテゴリ <small>複数選択</small></h3><CheckboxGroup values={categoryGroups} selected={draft.categories} labels={categoryLabels} onChange={categories => onChange({ ...draft, categories })} /><label className="filter-subcategory-option"><input type="checkbox" checked={draft.includeSubcategories} onChange={event => onChange({ ...draft, includeSubcategories: event.target.checked })} /><span aria-hidden="true">{draft.includeSubcategories ? '✓' : ''}</span><span><b>サブカテゴリも含める</b><small>オフにすると主カテゴリだけで絞り込みます</small></span></label></section>
@@ -1056,6 +1091,7 @@ function App() {
     liveBoundsRef.current = bounds
     setLiveBounds(bounds)
   }, [])
+  const refreshListBounds = useCallback(() => setListBounds(liveBoundsRef.current), [])
   const handleSelect = useCallback((facility: Facility | null) => {
     setSelectionOrigin('map')
     setSelectedId(facility?.id || null)
@@ -1112,6 +1148,7 @@ function App() {
     if (mobile) setSelectedId(null)
   }
   const applyFilters = () => {
+    if (draft.prefecture !== filters.prefecture) setSelectedId(null)
     setFilters(cloneFilters(draft))
     setTemporaryId(null)
     setFilterOpen(false)
@@ -1123,6 +1160,7 @@ function App() {
 
   const activeChips = useMemo(() => {
     const chips: { key: string; label: string; remove: () => void }[] = []
+    if (filters.prefecture) chips.push({ key: 'prefecture', label: filters.prefecture, remove: () => setFilters(current => ({ ...current, prefecture: '' })) })
     if (!sameValues(filters.operational, INITIAL_FILTERS.operational)) chips.push({
       key: 'operational',
       label: `施設の状態: ${filters.operational.map(value => operationalLabels[value]).join('・') || 'すべて'}`,
@@ -1168,7 +1206,7 @@ function App() {
       {activeChips.length > 0 && <div className="active-chips">{activeChips.map(chip => <Button key={chip.key} onClick={chip.remove}>{chip.label}<Icon name="close" size={12} /></Button>)}</div>}
 
       <section className="map-area">
-        <MapCanvas items={visible} selectedId={filterOpen ? null : selectedId} temporaryId={temporaryId} layoutKey={layoutKey} mobile={mobile} focusRequest={focusRequest} onSelect={handleSelect} onBounds={handleBounds} onErrorChange={handleMapError} />
+        <MapCanvas items={visible} prefecture={filters.prefecture} selectedId={filterOpen ? null : selectedId} temporaryId={temporaryId} layoutKey={layoutKey} mobile={mobile} focusRequest={focusRequest} onSelect={handleSelect} onBounds={handleBounds} onPrefectureFit={refreshListBounds} onErrorChange={handleMapError} />
         {!mapError && <svg className="map-center-target" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
           <path d="M12 4v16M4 12h16" stroke="white" strokeWidth="4" strokeLinecap="round" />
           <path d="M12 4v16M4 12h16" stroke="#687671" strokeWidth="1.5" strokeLinecap="round" />

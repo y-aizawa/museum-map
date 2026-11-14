@@ -237,6 +237,7 @@ button, input { font: inherit; }
 .filter-subcategory-option:focus-within { outline: 2px solid var(--brand); outline-offset: 2px; }
 .filter-help { margin: 8px 0 0; color: var(--muted); font-size: 8px; line-height: 1.5; }
 .date-input { width: 100%; height: 40px; margin-top: 8px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: white; font-size: 10px; }
+.prefecture-select { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: white; font-size: 16px; }
 .filter-panel > footer { padding: 11px; display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 7px; border-top: 1px solid var(--line); background: white; }
 .filter-panel footer button { min-height: 43px; padding: 5px; border: 1px solid var(--line); border-radius: 8px; font-size: 9px; font-weight: 700; }
 .filter-panel footer .apply { color: white; border-color: var(--brand); background: var(--brand); }
