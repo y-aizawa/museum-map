@@ -506,7 +506,7 @@ function appendOpeningHours(
     else if (groupHours === '' || (groupHours === undefined && schedule.today === '—')) todayHours.classList.add('popup-hours-message')
     todayHours.textContent = inactive ? operationalLabels[facility.operational_status]
       : openingPlan ? '開館前'
-      : groupHours !== undefined ? groupHours || '施設別の案内をご確認ください'
+      : groupHours !== undefined ? groupHours || todayHoursText(facility, '—')
       : todayHoursText(facility, schedule.today)
     hoursBox.append(todayHours)
   }
