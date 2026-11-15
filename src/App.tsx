@@ -74,6 +74,9 @@ type Facility = {
   } | null
   reservation: string
   status_note: string
+  dated_closures?: { start_date: string; end_date: string; kind: 'closed' }[]
+  dated_openings?: { date: string; open: string; close: string; last_admission?: string; reservation_required?: boolean }[]
+  inactive_notice?: string
   address: string
   prefecture?: string | null
   latitude: number
@@ -250,14 +253,16 @@ function displayMuseumCategories(facility: Facility) {
     .map(category => museumCategoryLabels[category])
 }
 
-type ScheduleDisplay = { today: string; summary: string; closure: string }
+type ScheduleDisplay = { today: string; summary: string; closure: string; datedOverride?: boolean }
 
 const emptySchedule: ScheduleDisplay = { today: '—', summary: '', closure: '' }
 
 function closureDisplay(value: string) {
   if (value === '休館日は公式カレンダーをご確認ください') return value
-  const cleaned = value.split(/入場料|観覧料|入館料|料金|最寄り駅|アクセス|交通案内|お問い合わせ|お問合せ|Instagram|facebook|twitter|Copyright|PAGE TOP|###|主催|共催|会場|会期|開館時間|営業時間|施設紹介|見る・参加する/i)[0]
-    .replace(/^(?:休館日等|休館日|休園日|定休日)\s*[:：]?\s*/, '').trim()
+  const unrelated = /入場料|観覧料|入館料|料金|最寄り駅|アクセス|交通案内|お問い合わせ|お問合せ|Instagram|facebook|twitter|Copyright|PAGE TOP|###|主催|共催|施設紹介|見る・参加する/i
+  const cleaned = value.split(/(?<=。)\s*|\n+/u)
+    .filter(line => !unrelated.test(line))
+    .join('').replace(/^(?:休館日等|休館日|休園日|定休日)\s*[:：]?\s*/, '').trim()
   if (!cleaned || cleaned.length > 160 || /\.\.\.|…|https?:|wordlim|/.test(cleaned)) return '休館日は公式カレンダーをご確認ください'
   return cleaned
 }
@@ -271,7 +276,7 @@ function scheduleGuidance(value: string) {
   })
 }
 
-function scheduleDisplay(facility: Facility): ScheduleDisplay {
+function baselineScheduleDisplay(facility: Facility): ScheduleDisplay {
   const unavailable = Boolean(getOpeningPlan(facility)) || facility.operational_status !== 'active'
   if (unavailable || facility.schedule_display === 'official_site_only') return emptySchedule
   const structured = facility.schedule
@@ -301,8 +306,21 @@ function scheduleDisplay(facility: Facility): ScheduleDisplay {
   }
 }
 
+function scheduleDisplay(facility: Facility): ScheduleDisplay {
+  const result = baselineScheduleDisplay(facility)
+  if (facility.operational_status !== 'active' || getOpeningPlan(facility)) return result
+  const date = todayInTokyo()
+  const closed = facility.dated_closures?.some(interval => interval.kind === 'closed' && interval.start_date <= date && date <= interval.end_date)
+  if (closed) return { ...result, today: '休館日', datedOverride: true }
+  const opening = facility.dated_openings?.find(entry => entry.date === date)
+  if (!opening) return result
+  const admission = opening.last_admission ? `（最終入館 ${opening.last_admission}）` : ''
+  return { ...result, today: `${opening.open}–${opening.close}${admission}`, datedOverride: true }
+}
+
 function conditionTags(facility: Facility) {
   if (facility.operational_status !== 'active') return []
+  if (facility.dated_openings?.some(entry => entry.date === todayInTokyo() && entry.reservation_required)) return ['要予約']
   const labels: Record<string, string> = {
     required: '要予約',
     required_group_only: '申込制・団体のみ受付',
@@ -329,6 +347,7 @@ function formatExhibitionPeriod(exhibition: Exhibition) {
 }
 
 function publicNotice(facility: Facility) {
+  if (['suspended', 'closed'].includes(facility.operational_status) && facility.inactive_notice) return facility.inactive_notice
   if (facility.operational_status === 'closed') return ''
   if (facility.operational_status === 'suspended') {
     const note = facility.status_note
@@ -498,34 +517,43 @@ function appendOpeningHours(
     ...(facility.planned_changes || []).flatMap(plan => plannedChangeDisplay(plan, date).lines),
   ]
   const schedule = scheduleDisplay(facility)
-  const lines = hasSeparateHours || inactive || openingPlan ? [] : scheduleGuidance(groupHours ?? schedule.summary)
-  const closure = groupHours === undefined && schedule.closure
-    ? scheduleGuidance(closureDisplay(schedule.closure)).filter(line => !schedule.summary.includes(line)).join('')
+  const lines = hasSeparateHours || inactive || openingPlan || schedule.today === '休館日'
+    ? [] : scheduleGuidance(groupHours ?? schedule.summary)
+  const showClosure = groupHours === undefined
+    || (Boolean(groupHours) && facility.schedule_applicability === 'facility_specific')
+  const closure = showClosure && schedule.closure
+    ? scheduleGuidance(closureDisplay(schedule.closure)).filter(line => !lines.includes(line)).join('')
     : ''
   const hasGuidance = !weekdayRows.length && schedule.today !== '休館日' && lines.length > 0
-  const firstRange = hasGuidance ? lines[0].match(/^(\d{1,2}:\d{2}[–〜～−-]\d{1,2}:\d{2})(?=$|[。 （(])/u)?.[1] : undefined
+  const reservationSlots = schedule.today === '予約枠による'
+  const rangeCount = lines.join(' ').match(/\d{1,2}:\d{2}[–〜～−-]\d{1,2}:\d{2}/gu)?.length ?? 0
+  const firstRange = hasGuidance && !reservationSlots && rangeCount === 1
+    ? lines[0].match(/^(\d{1,2}:\d{2}[–〜～−-]\d{1,2}:\d{2})(?=$|[。 （(])/u)?.[1] : undefined
   const detailLines = firstRange ? [lines[0].slice(firstRange.length).trim(), ...lines.slice(1)] : lines
   const closureNote = closure && (/休館|休室|休園/u.test(closure) ? closure : `休館日　${closure}`)
   const notes = [...detailLines, closureNote].filter(text => text && text !== '。')
   const expandedGuidance = notes.length > 1 || notes.some(text => text.length > 55
     || (text.match(/\d{1,2}:\d{2}[–〜～−-]\d{1,2}:\d{2}/gu)?.length ?? 0) > 1)
-  if (hasSeparateHours && !planLines.length && !closure) return
+  const showToday = schedule.today === '休館日' || schedule.datedOverride
+  if (hasSeparateHours && !schedule.datedOverride && !planLines.length && !closure) return
   const section = document.createElement('div')
   section.className = 'popup-schedule'
   const hoursBox = document.createElement('div')
   hoursBox.className = 'popup-hours-box'
-  if (!hasSeparateHours) {
+  if (!hasSeparateHours || schedule.datedOverride) {
     if (!inactive && !openingPlan) {
       const heading = document.createElement('h3')
-      heading.textContent = groupHours !== undefined || hasGuidance ? '開館時間' : '本日の開館時間'
+      heading.textContent = showToday ? '本日の開館時間'
+        : groupHours !== undefined || hasGuidance ? '開館時間' : '本日の開館時間'
       section.append(heading)
     }
-    if (inactive || openingPlan || !hasGuidance || firstRange || expandedGuidance) {
+    if (inactive || openingPlan || showToday || reservationSlots || !hasGuidance || firstRange || expandedGuidance) {
       const todayHours = document.createElement('strong')
       todayHours.className = 'popup-today-hours'
       if (inactive || openingPlan) todayHours.classList.add('popup-facility-status')
       todayHours.textContent = inactive ? operationalLabels[facility.operational_status]
         : openingPlan ? '開館前'
+        : showToday || reservationSlots ? schedule.today
         : firstRange || (groupHours !== undefined || hasGuidance ? todayHoursText(facility, '—') : todayHoursText(facility, schedule.today))
       hoursBox.append(todayHours)
     }
@@ -613,7 +641,15 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
     }))
     const hoursBox = appendOpeningHours(root, facility, date, sharedWeek ? weekdayRows : [], false,
       sharedWeek ? undefined : facility.group_visit?.shared_hours ?? '')
-    if (hoursBox) appendGroupedVisitNotes(hoursBox, venues, componentNotes)
+    if (hoursBox && !grouped && facility.group_visit?.shared_hours && componentNotes.length === 1
+      && !componentNotes[0].official_url && componentNotes[0].text.length <= 30) {
+      const note = document.createElement('p')
+      note.className = 'popup-hours-note'
+      note.textContent = `${componentNotes[0].scope}は${componentNotes[0].text}`
+      hoursBox.append(note)
+    } else if (hoursBox) {
+      appendGroupedVisitNotes(hoursBox, venues, componentNotes)
+    }
   } else {
     appendOpeningHours(root, facility, date, weekdayRows, !weekdayRows.length && Boolean(access))
   }
@@ -1102,12 +1138,13 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
   const limitedAccess = access ? limitedPublicAccessDisplay(access, date) : null
   const members = facility.grouped_facilities || []
   const groupCount = members.length
-  const separateHours = Boolean(limitedAccess) || (groupCount > 1
+  const separateHours = Boolean(limitedAccess) || facility.schedule_applicability === 'facility_specific' || (groupCount > 1
     && hasMemberSchedules(members, currentComponentScheduleNotes(facility, date)))
-  const showHours = !separateHours || activeWeekdayRows(facility, date).length > 0
+  const schedule = scheduleDisplay(facility)
+  const showHours = !separateHours || schedule.datedOverride
+    || activeWeekdayRows(facility, date).length > 0
   const planDisplays = (facility.planned_changes || []).map(plan => plannedChangeDisplay(plan, todayInTokyo()))
   const planLines = [...(openingPlan ? [openingPlanText(openingPlan)] : []), ...planDisplays.flatMap(plan => plan.lines)]
-  const schedule = scheduleDisplay(facility)
   const notice = publicNotice(facility)
   const categories = displayCategories(facility).join('｜')
   return (
