@@ -658,7 +658,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
       const dates = document.createElement('span')
       dates.textContent = `会期：${formatExhibitionPeriod(exhibition)}`
       item.append(state, name)
-      if (grouped) {
+      if (grouped || exhibition.member_venues?.length) {
         const venue = document.createElement('span')
         venue.textContent = exhibition.member_venues?.length
           ? `会場　${exhibition.member_venues.join('／')}`
