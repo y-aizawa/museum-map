@@ -498,11 +498,12 @@ function appendOpeningHours(
     ...(facility.planned_changes || []).flatMap(plan => plannedChangeDisplay(plan, date).lines),
   ]
   const schedule = scheduleDisplay(facility)
-  const lines = groupHours === undefined && !hasSeparateHours ? scheduleGuidance(schedule.summary) : []
+  const lines = hasSeparateHours || inactive || openingPlan ? [] : scheduleGuidance(groupHours ?? schedule.summary)
   const closure = groupHours === undefined && schedule.closure
     ? scheduleGuidance(closureDisplay(schedule.closure)).filter(line => !schedule.summary.includes(line)).join('')
     : ''
-  const summaryIsPrimary = groupHours === undefined && !weekdayRows.length && schedule.today !== '休館日' && lines.length > 0
+  const hasGuidance = !weekdayRows.length && schedule.today !== '休館日' && lines.length > 0
+  const firstRange = hasGuidance ? lines[0].match(/^(\d{1,2}:\d{2}[–〜～−-]\d{1,2}:\d{2})(?=$|[。 （(])/u)?.[1] : undefined
   if (hasSeparateHours && !planLines.length && !closure) return
   const section = document.createElement('div')
   section.className = 'popup-schedule'
@@ -511,18 +512,18 @@ function appendOpeningHours(
   if (!hasSeparateHours) {
     if (!inactive && !openingPlan) {
       const heading = document.createElement('h3')
-      heading.textContent = groupHours !== undefined || summaryIsPrimary ? '開館時間' : '本日の開館時間'
+      heading.textContent = groupHours !== undefined || hasGuidance ? '開館時間' : '本日の開館時間'
       section.append(heading)
     }
-    const todayHours = document.createElement('strong')
-    todayHours.className = 'popup-today-hours'
-    if (inactive || openingPlan) todayHours.classList.add('popup-facility-status')
-    todayHours.textContent = inactive ? operationalLabels[facility.operational_status]
-      : openingPlan ? '開館前'
-      : groupHours !== undefined ? groupHours || todayHoursText(facility, '—')
-      : summaryIsPrimary ? lines[0]
-      : todayHoursText(facility, schedule.today)
-    hoursBox.append(todayHours)
+    if (inactive || openingPlan || !hasGuidance || firstRange) {
+      const todayHours = document.createElement('strong')
+      todayHours.className = 'popup-today-hours'
+      if (inactive || openingPlan) todayHours.classList.add('popup-facility-status')
+      todayHours.textContent = inactive ? operationalLabels[facility.operational_status]
+        : openingPlan ? '開館前'
+        : firstRange || (groupHours !== undefined ? todayHoursText(facility, '—') : todayHoursText(facility, schedule.today))
+      hoursBox.append(todayHours)
+    }
   }
   appendPlanLines(hoursBox, planLines)
   if (groupHours === undefined && weekdayRows.length) {
@@ -543,8 +544,10 @@ function appendOpeningHours(
     details.append(heading, content)
     hoursBox.append(details)
   } else {
-    const notes = lines.slice(summaryIsPrimary ? 1 : 0).join('')
-    for (const text of [notes, closure && `休館日　${closure}`]) {
+    const notes = firstRange ? [lines[0].slice(firstRange.length).trim(), ...lines.slice(1)] : lines
+    const closureNote = closure && (/休館|休室|休園/u.test(closure) ? closure : `休館日　${closure}`)
+    for (const text of [...notes, closureNote]) {
+      if (text === '。') continue
       if (!text) continue
       const note = document.createElement('p')
       note.className = 'popup-hours-note'

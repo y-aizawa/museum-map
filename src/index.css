@@ -133,7 +133,8 @@ button, input { font: inherit; }
 .popup-schedule h3 { margin: 0 0 9px; font-size: 14px; }
 .popup-schedule > .popup-hours-box { display: block; padding: 13px 16px; background: #f1f6f3; border-radius: 12px; }
 .popup-today-hours { display: block; font-size: 22px; font-weight: 500; overflow-wrap: anywhere; }
-.popup-schedule > .popup-hours-box > .popup-hours-note { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.popup-schedule > .popup-hours-box > .popup-hours-note { margin: 6px 0 0; color: var(--ink); font-size: 14px; line-height: 1.55; overflow-wrap: anywhere; }
+.popup-schedule > .popup-hours-box > .popup-hours-note:first-child { margin-top: 0; }
 .popup-schedule details { margin-top: 8px; padding-left: 0; }
 .popup-schedule summary { font-size: 12px; }
 .popup-schedule dl { display: grid; grid-template-columns: 85px minmax(0,1fr); gap: 9px; margin: 13px 0 0; font-size: 12px; line-height: 1.7; }
