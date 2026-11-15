@@ -504,6 +504,11 @@ function appendOpeningHours(
     : ''
   const hasGuidance = !weekdayRows.length && schedule.today !== '休館日' && lines.length > 0
   const firstRange = hasGuidance ? lines[0].match(/^(\d{1,2}:\d{2}[–〜～−-]\d{1,2}:\d{2})(?=$|[。 （(])/u)?.[1] : undefined
+  const detailLines = firstRange ? [lines[0].slice(firstRange.length).trim(), ...lines.slice(1)] : lines
+  const closureNote = closure && (/休館|休室|休園/u.test(closure) ? closure : `休館日　${closure}`)
+  const notes = [...detailLines, closureNote].filter(text => text && text !== '。')
+  const expandedGuidance = notes.length > 1 || notes.some(text => text.length > 55
+    || (text.match(/\d{1,2}:\d{2}[–〜～−-]\d{1,2}:\d{2}/gu)?.length ?? 0) > 1)
   if (hasSeparateHours && !planLines.length && !closure) return
   const section = document.createElement('div')
   section.className = 'popup-schedule'
@@ -515,13 +520,13 @@ function appendOpeningHours(
       heading.textContent = groupHours !== undefined || hasGuidance ? '開館時間' : '本日の開館時間'
       section.append(heading)
     }
-    if (inactive || openingPlan || !hasGuidance || firstRange) {
+    if (inactive || openingPlan || !hasGuidance || firstRange || expandedGuidance) {
       const todayHours = document.createElement('strong')
       todayHours.className = 'popup-today-hours'
       if (inactive || openingPlan) todayHours.classList.add('popup-facility-status')
       todayHours.textContent = inactive ? operationalLabels[facility.operational_status]
         : openingPlan ? '開館前'
-        : firstRange || (groupHours !== undefined ? todayHoursText(facility, '—') : todayHoursText(facility, schedule.today))
+        : firstRange || (groupHours !== undefined || hasGuidance ? todayHoursText(facility, '—') : todayHoursText(facility, schedule.today))
       hoursBox.append(todayHours)
     }
   }
@@ -544,15 +549,18 @@ function appendOpeningHours(
     details.append(heading, content)
     hoursBox.append(details)
   } else {
-    const notes = firstRange ? [lines[0].slice(firstRange.length).trim(), ...lines.slice(1)] : lines
-    const closureNote = closure && (/休館|休室|休園/u.test(closure) ? closure : `休館日　${closure}`)
-    for (const text of [...notes, closureNote]) {
-      if (text === '。') continue
-      if (!text) continue
+    const target = expandedGuidance ? document.createElement('details') : hoursBox
+    if (expandedGuidance) {
+      const heading = document.createElement('summary')
+      heading.textContent = '開館・見学案内'
+      target.append(heading)
+      hoursBox.append(target)
+    }
+    for (const text of notes) {
       const note = document.createElement('p')
       note.className = 'popup-hours-note'
       note.textContent = text
-      hoursBox.append(note)
+      target.append(note)
     }
   }
   section.append(hoursBox)
@@ -595,18 +603,22 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   const access = activePublicAccess(facility)
   const members = facility.grouped_facilities || []
   const grouped = members.length > 1
+  const scopedHours = facility.schedule_applicability === 'facility_specific'
   const weekdayRows = activeWeekdayRows(facility, date)
   const componentNotes = currentComponentScheduleNotes(facility, date)
-  if (grouped) {
-    const sharedWeek = Boolean(facility.group_visit?.shared_weekly_schedule && weekdayRows.length)
+  if (grouped || scopedHours) {
+    const sharedWeek = Boolean(grouped && facility.group_visit?.shared_weekly_schedule && weekdayRows.length)
+    const venues = grouped ? members : [...new Set(componentNotes.map(note => note.scope))].map(name => ({
+      name, official_url: componentNotes.find(note => note.scope === name && note.official_url)?.official_url,
+    }))
     const hoursBox = appendOpeningHours(root, facility, date, sharedWeek ? weekdayRows : [], false,
       sharedWeek ? undefined : facility.group_visit?.shared_hours ?? '')
-    if (hoursBox) appendGroupedVisitNotes(hoursBox, members, componentNotes)
+    if (hoursBox) appendGroupedVisitNotes(hoursBox, venues, componentNotes)
   } else {
     appendOpeningHours(root, facility, date, weekdayRows, !weekdayRows.length && Boolean(access))
   }
   if (access) appendPublicAccess(root, access, date, facility.official_url)
-  appendComponentScheduleNotes(root, componentNotes.filter(note => !members.some(member => member.name === note.scope)))
+  if (!scopedHours) appendComponentScheduleNotes(root, componentNotes.filter(note => !members.some(member => member.name === note.scope)))
   appendPlannedChangeNotes(root, facility.planned_changes || [], date)
   const tags = conditionTags(facility)
   if (tags.length) {

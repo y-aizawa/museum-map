@@ -1,6 +1,7 @@
 export type ComponentScheduleNote = {
   scope: string
   text: string
+  official_url?: string
   valid_from?: string
   valid_through?: string
 }
