@@ -13,6 +13,8 @@ import { weeklyScheduleRows } from './weeklySchedule'
 import type { WeeklyScheduleRule } from './weeklySchedule'
 import { appendPlanLines, appendPlannedChangeNotes, plannedChangeDisplay } from './plannedChanges'
 import type { PlannedChange } from './plannedChanges'
+import { limitedPublicAccessDisplay } from './limitedPublicAccess'
+import type { LimitedPublicAccess } from './limitedPublicAccess'
 import { createGoogleMapsAction } from './googleMaps'
 import { createOfficialSiteAction, todayHoursText } from './officialSite'
 import type { GoogleMapsReview } from './googleMaps'
@@ -55,6 +57,7 @@ type Facility = {
   planned_changes?: PlannedChange[]
   schedule_display?: 'official_site_only'
   component_schedule_notes?: ComponentScheduleNote[]
+  limited_public_access?: LimitedPublicAccess
   schedule_summary: string
   schedule_applicability: string
   schedule?: {
@@ -428,24 +431,47 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   const hoursHeading = document.createElement('h3')
   const openingPlan = getOpeningPlan(facility)
   const inactive = facility.operational_status === 'suspended' || facility.operational_status === 'closed'
+  const access = !inactive && !openingPlan ? facility.limited_public_access : undefined
+  const limitedAccess = access ? limitedPublicAccessDisplay(access, todayInTokyo()) : null
   hoursHeading.textContent = '本日の開館時間'
   const hoursBox = document.createElement('div')
   hoursBox.className = 'popup-hours-box'
   const todayHours = document.createElement('strong')
   todayHours.className = 'popup-today-hours'
   if (inactive || openingPlan) todayHours.classList.add('popup-facility-status')
+  if (limitedAccess) todayHours.classList.add('limited-access-label')
   todayHours.textContent = facility.operational_status === 'closed' ? '閉館済み'
     : facility.operational_status === 'suspended' ? '休館中'
     : openingPlan ? '開館前'
+    : limitedAccess ? limitedAccess.label
     : todayHoursText(facility, schedule.today)
-  if (schedule.today === '—' && !openingPlan && !inactive) todayHours.classList.add('popup-hours-message')
+  if (schedule.today === '—' && !openingPlan && !inactive && !limitedAccess) todayHours.classList.add('popup-hours-message')
   hoursBox.append(todayHours)
   const planLines = [
     ...(openingPlan ? [openingPlanText(openingPlan)] : []),
     ...(facility.planned_changes || []).flatMap(plan => plannedChangeDisplay(plan, todayInTokyo()).lines),
   ]
-  appendPlanLines(hoursBox, planLines)
-  if (!inactive && (schedule.details || schedule.regular !== '—' || schedule.closed !== '—')) {
+  appendPlanLines(hoursBox, limitedAccess ? [limitedAccess.timing, ...planLines] : planLines)
+  if (access) {
+    const details = document.createElement('div')
+    details.className = 'popup-status-reason'
+    for (const value of [access.scope && `公開対象 ${access.scope}`, access.recurring]) {
+      if (!value) continue
+      const row = document.createElement('div')
+      row.textContent = value
+      details.append(row)
+    }
+    const url = access.official_url?.trim()
+    if (url && /^https?:\/\//i.test(url) && url !== facility.official_url?.trim()) {
+      const link = document.createElement('a')
+      link.href = url
+      link.target = '_blank'
+      link.rel = 'noreferrer'
+      link.textContent = '公開案内を見る'
+      details.append(link)
+    }
+    if (details.childNodes.length) hoursBox.append(details)
+  } else if (!inactive && (schedule.details || schedule.regular !== '—' || schedule.closed !== '—')) {
     const details = document.createElement('details')
     const summary = document.createElement('summary')
     summary.textContent = '曜日ごとの開館時間'
@@ -474,7 +500,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
     details.append(summary, content)
     hoursBox.append(details)
   }
-  if (!inactive && !openingPlan) scheduleElement.append(hoursHeading)
+  if (!inactive && !openingPlan && !limitedAccess) scheduleElement.append(hoursHeading)
   scheduleElement.append(hoursBox)
   root.append(scheduleElement)
   appendComponentScheduleNotes(root, currentComponentScheduleNotes(facility, todayInTokyo()))
@@ -949,6 +975,9 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
     Number(exhibitionPhase(right) === '開催中') - Number(exhibitionPhase(left) === '開催中')
     || (left.start_date || '').localeCompare(right.start_date || ''))
   const openingPlan = getOpeningPlan(facility)
+  const inactive = facility.operational_status === 'suspended' || facility.operational_status === 'closed'
+  const access = !inactive && !openingPlan ? facility.limited_public_access : undefined
+  const limitedAccess = access ? limitedPublicAccessDisplay(access, todayInTokyo()) : null
   const planDisplays = (facility.planned_changes || []).map(plan => plannedChangeDisplay(plan, todayInTokyo()))
   const planLines = [...(openingPlan ? [openingPlanText(openingPlan)] : []), ...planDisplays.flatMap(plan => plan.lines)]
   const schedule = scheduleDisplay(facility)
@@ -965,9 +994,10 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
         <div className="list-museum-categories">{displayMuseumCategories(facility).map(category => <span key={category}>{category}</span>)}</div>
       </div>
       {facility.address && <div className="list-card-address">{facility.address}</div>}
-      <div className={`list-schedule ${planLines.length ? 'list-with-plans' : ''} ${['suspended', 'closed'].includes(facility.operational_status) || openingPlan ? 'list-inactive' : ''}`}>
-        {['suspended', 'closed'].includes(facility.operational_status) ? <p>{operationalLabels[facility.operational_status]}</p>
+      <div className={`list-schedule ${planLines.length || limitedAccess ? 'list-with-plans' : ''} ${inactive || openingPlan ? 'list-inactive' : ''}`}>
+        {inactive ? <p>{operationalLabels[facility.operational_status]}</p>
           : openingPlan ? <p>開館前</p>
+          : limitedAccess ? <><span className="limited-access-label">{limitedAccess.label}</span><span className="list-status-detail">{limitedAccess.timing}</span></>
           : <div><span>本日</span><p>{todayHoursText(facility, schedule.today)}</p></div>}
         {planLines.map((line, index) => <span className="list-status-detail" key={index}>｜{line}</span>)}
       </div>

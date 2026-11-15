@@ -298,6 +298,8 @@ button, input { font: inherit; }
 .list-inactive, .list-with-plans { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
 .list-schedule .list-status-detail { color: inherit; font-size: 13px; font-weight: 600; }
 .list-inactive .list-status-reason { font-size: 11px; }
+.popup-hours-box .limited-access-label, .list-schedule .limited-access-label { display: inline-block; padding: 3px 8px; border-radius: 999px; color: var(--brand-dark); background: #dfeee8; font-size: 11px; font-weight: 600; }
+.popup-status-reason a { color: var(--brand-dark); text-decoration: underline; }
 
 /* Temporary review links scope both the map and search to fixed facility IDs. */
 .review-context { position: fixed; top: 76px; left: 16px; z-index: 46; max-width: calc(100vw - 32px); display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 9px 12px; border: 1px solid #a7c7bf; border-radius: 10px; background: #f0f8f5; font-size: 11px; box-shadow: var(--shadow); }
