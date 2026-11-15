@@ -796,6 +796,17 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusReq
     if (!map || loading) return
     markersRef.current.forEach(marker => marker.remove())
     markersRef.current.clear()
+    const markerGroups = new Map<string, Facility[]>()
+    for (const facility of items) {
+      const locationKey = `${facility.longitude},${facility.latitude}`
+      const group = markerGroups.get(locationKey) || []
+      group.push(facility)
+      markerGroups.set(locationKey, group)
+    }
+    const markerOffsets = new Map<string, number>()
+    for (const group of markerGroups.values()) {
+      group.forEach((facility, index) => markerOffsets.set(facility.id, (index - (group.length - 1) / 2) * 44))
+    }
     items.forEach(facility => {
       const element = document.createElement('div')
       element.className = 'museum-marker-anchor'
@@ -805,27 +816,18 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusReq
       if (reviewNumber) pin.dataset.reviewNumber = String(reviewNumber)
       pin.className = `museum-pin category-${getCategoryGroup(facility)}`
       pin.style.setProperty('--pin', categoryColors[getCategoryGroup(facility)])
-      const groupCount = facility.grouped_facilities?.length || 0
       pin.setAttribute('aria-label', [
         facilityLabel(facility),
-        groupCount > 1 ? `${groupCount}施設` : '',
         getOpeningPlan(facility)?.kind === 'opening' ? '開館予定' : operationalLabels[facility.operational_status],
       ].filter(Boolean).join('、'))
       const symbol = document.createElement('span')
       symbol.textContent = categorySymbols[getCategoryGroup(facility)]
       pin.append(symbol)
-      if (groupCount > 1) {
-        const count = document.createElement('small')
-        count.className = 'pin-group-count'
-        count.textContent = String(groupCount)
-        count.setAttribute('aria-hidden', 'true')
-        pin.append(count)
-      }
       element.append(pin)
       const marker = new Marker({
         element,
         anchor: 'bottom',
-        offset: [0, 0],
+        offset: [markerOffsets.get(facility.id) ?? 0, 0],
         subpixelPositioning: true,
       })
         .setLngLat([facility.longitude, facility.latitude])
