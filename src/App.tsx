@@ -262,6 +262,15 @@ function closureDisplay(value: string) {
   return cleaned
 }
 
+function scheduleGuidance(value: string) {
+  return value.split(/(?<=。)\s*|\n+/u).map(line => line.trim()).filter(line => {
+    if (!line || /^(?:未確認|不明|—)[。 ]*$/u.test(line)) return false
+    if (/\d{1,2}(?:[:：]\d{2}|時)/u.test(line)) return true
+    // A direction to check another page is already covered by the hours fallback.
+    return !/^(?:(?:[^。！？]{1,45})(?:は|については)[、 ]*)?(?:(?:日別|最新)の)?(?:公式(?:サイト|カレンダー|の案内|の企画案内|案内)|開催展の公式案内|市の案内|予約案内|施設の(?:最新)?案内)(?:を|で)(?:ご確認ください|確認(?:してください)?)[。 ]*$/u.test(line)
+  })
+}
+
 function scheduleDisplay(facility: Facility): ScheduleDisplay {
   const unavailable = Boolean(getOpeningPlan(facility)) || facility.operational_status !== 'active'
   if (unavailable || facility.schedule_display === 'official_site_only') return emptySchedule
@@ -489,7 +498,12 @@ function appendOpeningHours(
     ...(facility.planned_changes || []).flatMap(plan => plannedChangeDisplay(plan, date).lines),
   ]
   const schedule = scheduleDisplay(facility)
-  if (hasSeparateHours && !planLines.length && !schedule.closure) return
+  const lines = groupHours === undefined && !hasSeparateHours ? scheduleGuidance(schedule.summary) : []
+  const closure = groupHours === undefined && schedule.closure
+    ? scheduleGuidance(closureDisplay(schedule.closure)).filter(line => !schedule.summary.includes(line)).join('')
+    : ''
+  const summaryIsPrimary = groupHours === undefined && !weekdayRows.length && schedule.today !== '休館日' && lines.length > 0
+  if (hasSeparateHours && !planLines.length && !closure) return
   const section = document.createElement('div')
   section.className = 'popup-schedule'
   const hoursBox = document.createElement('div')
@@ -497,26 +511,26 @@ function appendOpeningHours(
   if (!hasSeparateHours) {
     if (!inactive && !openingPlan) {
       const heading = document.createElement('h3')
-      heading.textContent = groupHours === undefined ? '本日の開館時間' : '開館時間'
+      heading.textContent = groupHours !== undefined || summaryIsPrimary ? '開館時間' : '本日の開館時間'
       section.append(heading)
     }
     const todayHours = document.createElement('strong')
     todayHours.className = 'popup-today-hours'
     if (inactive || openingPlan) todayHours.classList.add('popup-facility-status')
-    else if (groupHours === '' || (groupHours === undefined && schedule.today === '—')) todayHours.classList.add('popup-hours-message')
     todayHours.textContent = inactive ? operationalLabels[facility.operational_status]
       : openingPlan ? '開館前'
       : groupHours !== undefined ? groupHours || todayHoursText(facility, '—')
+      : summaryIsPrimary ? lines[0]
       : todayHoursText(facility, schedule.today)
     hoursBox.append(todayHours)
   }
   appendPlanLines(hoursBox, planLines)
-  if (groupHours === undefined && (weekdayRows.length || (!hasSeparateHours && schedule.summary) || schedule.closure)) {
+  if (groupHours === undefined && weekdayRows.length) {
     const details = document.createElement('details')
     const heading = document.createElement('summary')
-    heading.textContent = weekdayRows.length ? '曜日ごとの開館時間' : '開館・見学案内'
+    heading.textContent = '曜日ごとの開館時間'
     const content = document.createElement('dl')
-    if (weekdayRows.length) content.className = 'popup-weekday-hours'
+    content.className = 'popup-weekday-hours'
     const addRow = (label: string, value: string) => {
       const term = document.createElement('dt')
       term.textContent = label
@@ -525,12 +539,18 @@ function appendOpeningHours(
       content.append(term, description)
     }
     weekdayRows.forEach(row => addRow(row.day, row.text))
-    if (!hasSeparateHours && schedule.summary) addRow('見学案内', schedule.summary)
-    if (schedule.closure && (hasSeparateHours || !schedule.summary.includes(schedule.closure))) {
-      addRow(weekdayRows.length ? '補足' : '休館日', closureDisplay(schedule.closure))
-    }
+    if (closure) addRow('補足', closure)
     details.append(heading, content)
     hoursBox.append(details)
+  } else {
+    const notes = lines.slice(summaryIsPrimary ? 1 : 0).join('')
+    for (const text of [notes, closure && `休館日　${closure}`]) {
+      if (!text) continue
+      const note = document.createElement('p')
+      note.className = 'popup-hours-note'
+      note.textContent = text
+      hoursBox.append(note)
+    }
   }
   section.append(hoursBox)
   root.append(section)
