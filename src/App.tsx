@@ -20,7 +20,7 @@ import { createOfficialSiteAction, todayHoursText } from './officialSite'
 import type { GoogleMapsReview } from './googleMaps'
 import categoryDefinitions from './data/categories.json'
 import { SAMPLE_EXHIBITIONS_BY_FACILITY, SHOW_SAMPLE_EXHIBITIONS } from './data/sampleExhibitions'
-import { facilityPrefecture, prefectureRegions } from './prefectures'
+import { facilityPrefecture } from './prefectures'
 
 type OperationalStatus = 'active' | 'suspended' | 'closed' | 'unknown'
 type PublicationStatus = 'normal' | 'hold' | 'out_of_scope'
@@ -41,6 +41,8 @@ type Exhibition = {
 
 type SearchFocusRequest = { facilityId: string; sequence: number }
 
+type GroupedFacility = { name: string; location?: string; official_url?: string }
+
 type Facility = {
   id: string
   name: string
@@ -57,6 +59,7 @@ type Facility = {
   planned_changes?: PlannedChange[]
   schedule_display?: 'official_site_only'
   component_schedule_notes?: ComponentScheduleNote[]
+  grouped_facilities?: GroupedFacility[]
   limited_public_access?: LimitedPublicAccess
   schedule_summary: string
   schedule_applicability: string
@@ -82,7 +85,6 @@ type Facility = {
 }
 
 type Filters = {
-  prefecture: string
   operational: OperationalStatus[]
   includeOpeningPlans: boolean
   publication: PublicationStatus[]
@@ -116,21 +118,16 @@ function facilityLabel(facility: Facility) {
   const number = reviewNumbers.get(facility.id)
   return number ? `${number}. ${facility.name}` : facility.name
 }
-const facilities = review.items.map(facility => ({
-  ...facility,
-  prefecture: facilityPrefecture(facility),
-  special_exhibitions: SHOW_SAMPLE_EXHIBITIONS
-    ? [...(facility.special_exhibitions || []), ...(SAMPLE_EXHIBITIONS_BY_FACILITY[facility.name] || [])]
-    : facility.special_exhibitions,
-}))
-const availablePrefectures = new Set(facilities.map(facility => facility.prefecture).filter(Boolean))
-const availablePrefectureRegions = prefectureRegions.map(region => ({
-  name: region.name,
-  prefectures: region.prefectures.filter(prefecture => availablePrefectures.has(prefecture)),
-})).filter(region => region.prefectures.length > 0)
+const facilities = review.items
+  .filter(facility => reviewMode || facilityPrefecture(facility) === '東京都')
+  .map(facility => ({
+    ...facility,
+    special_exhibitions: SHOW_SAMPLE_EXHIBITIONS
+      ? [...(facility.special_exhibitions || []), ...(SAMPLE_EXHIBITIONS_BY_FACILITY[facility.name] || [])]
+      : facility.special_exhibitions,
+  }))
 setWorkerUrl(new URL(`${import.meta.env.BASE_URL}maplibre-gl-worker.mjs`, window.location.href).toString())
 const INITIAL_FILTERS: Filters = {
-  prefecture: '',
   operational: reviewMode ? [] : ['active'],
   includeOpeningPlans: reviewMode,
   publication: reviewMode ? [] : ['normal'],
@@ -198,15 +195,6 @@ function weekdayCodeInTokyo() {
   return ({ Mon: 'mo', Tue: 'tu', Wed: 'we', Thu: 'th', Fri: 'fr', Sat: 'sa', Sun: 'su' } as Record<string, string>)[weekday]
 }
 
-function weeklyRuleTime(rule: WeeklyScheduleRule) {
-  return `${rule.open}–${rule.close}${rule.last_admission ? `（最終入館 ${rule.last_admission}）` : ''}`
-}
-
-function weeklyDayLabel(rule: WeeklyScheduleRule, names: Record<string, string>) {
-  const days = rule.days.map(day => names[day] || day).join('・')
-  return rule.weeks?.length ? `第${rule.weeks.join('・')}${days}` : days
-}
-
 function datePlus(days: number) {
   const date = new Date(`${todayInTokyo()}T00:00:00+09:00`)
   date.setDate(date.getDate() + days)
@@ -228,7 +216,6 @@ function exhibitionMatches(facility: Facility, filter: ExhibitionFilter, date: s
 }
 
 function matchesFilters(facility: Facility, filters: Filters) {
-  if (filters.prefecture && facility.prefecture !== filters.prefecture) return false
   if (!matchesOperationalFilters(facility, filters.operational, filters.includeOpeningPlans)) return false
   if (filters.visit !== 'any' && getOpeningPlan(facility)) return false
   if (filters.publication.length && !filters.publication.includes(getPublicationStatus(facility))) return false
@@ -261,7 +248,9 @@ function displayMuseumCategories(facility: Facility) {
     .map(category => museumCategoryLabels[category])
 }
 
-type ScheduleDisplay = { today: string; regular: string; closed: string; details: string }
+type ScheduleDisplay = { today: string; summary: string; closure: string }
+
+const emptySchedule: ScheduleDisplay = { today: '—', summary: '', closure: '' }
 
 function closureDisplay(value: string) {
   if (value === '休館日は公式カレンダーをご確認ください') return value
@@ -273,38 +262,31 @@ function closureDisplay(value: string) {
 
 function scheduleDisplay(facility: Facility): ScheduleDisplay {
   const unavailable = Boolean(getOpeningPlan(facility)) || facility.operational_status !== 'active'
-  if (unavailable || facility.schedule_display === 'official_site_only') return { today: '—', regular: '—', closed: '—', details: '' }
+  if (unavailable || facility.schedule_display === 'official_site_only') return emptySchedule
   const structured = facility.schedule
   const date = todayInTokyo()
   if (structured?.valid_from && date < structured.valid_from || structured?.valid_through && date > structured.valid_through) {
-    return { today: '—', regular: '—', closed: '—', details: '' }
+    return emptySchedule
   }
   if (structured?.weekly?.length && ['current_baseline', 'current_exhibition'].includes(facility.schedule_applicability)) {
-    const days: Record<string, string> = { mo: '月', tu: '火', we: '水', th: '木', fr: '金', sa: '土', su: '日' }
-    const lines = structured.weekly.map(rule => `${weeklyDayLabel(rule, days)} ${weeklyRuleTime(rule)}`)
     const week = Math.ceil(Number(date.slice(-2)) / 7)
     const todayRules = structured.weekly.filter(rule => rule.days.includes(weekdayCodeInTokyo()) && (!rule.weeks?.length || rule.weeks.includes(week)))
     const today = todayRules.length ? todayRules.map(rule => `${rule.open}–${rule.close}`).join('／') : '休館日'
-    const closed = facility.schedule_summary.split(/[。]/).filter(clause => /休館|休園|定休/.test(clause)).join('。')
-    return { today, regular: lines.length <= 2 ? lines.join('／') : lines[0] + ' ほか', closed: closed || '—', details: [...lines, structured.holiday_rule || ''].filter(Boolean).join('\n') }
+    const closure = structured.holiday_rule || facility.schedule_summary.split('。')
+      .filter(clause => /休館|休園|定休/.test(clause)).join('。')
+    return { today, summary: '', closure }
   }
-  const currentSchedule = ['current_baseline', 'current_exhibition', 'reservation_calendar'].includes(facility.schedule_applicability)
+  const currentSchedule = ['current_baseline', 'current_exhibition', 'reservation_calendar', 'official_calendar'].includes(facility.schedule_applicability)
   const summary = currentSchedule && facility.schedule_summary !== '未確認'
     ? facility.schedule_summary
       .replace('月曜休館の原則と祝日例外は別途公式カレンダー照合待ち', '月曜休館（祝日は公式カレンダーをご確認ください）')
       .trim()
     : ''
   const reservationSlots = facility.reservation === 'required' || facility.schedule_applicability === 'reservation_calendar'
-  if (!summary) return { today: reservationSlots ? '予約枠による' : '—', regular: reservationSlots ? '予約枠による' : '—', closed: structured?.holiday_rule || '—', details: '' }
-  const sentences = summary.split('。').map(value => value.trim()).filter(Boolean)
-  const closureClauses = summary.split(/[。、]/).map(value => value.trim()).filter(value => /休館|休園|年末年始|定休/.test(value))
-  const regularClauses = (sentences[0] || '').split('、').map(value => value.trim()).filter(value => value && !/休館|休園|年末年始|定休/.test(value))
-  const regular = reservationSlots ? '予約枠による' : `${regularClauses.join('、')}${regularClauses.length ? '。' : ''}`
   return {
     today: reservationSlots ? '予約枠による' : '—',
-    regular: regular || '—',
-    closed: closureClauses.length ? `${closureClauses.join('、')}。` : '—',
-    details: sentences.length > 1 || reservationSlots ? summary : '',
+    summary,
+    closure: structured?.holiday_rule || '',
   }
 }
 
@@ -394,6 +376,162 @@ function Button({ children, className = '', ...props }: React.ButtonHTMLAttribut
   return <button className={`button ${className}`} {...props}>{children}</button>
 }
 
+function activePublicAccess(facility: Facility) {
+  return facility.operational_status === 'active' && !getOpeningPlan(facility)
+    ? facility.limited_public_access
+    : undefined
+}
+
+function activeWeekdayRows(facility: Facility, date: string) {
+  return facility.operational_status === 'active' && !getOpeningPlan(facility) && !facility.schedule_display
+    ? weeklyScheduleRows(facility.schedule, facility.schedule_applicability, date)
+    : []
+}
+
+function hasMemberSchedules(members: GroupedFacility[], notes: ComponentScheduleNote[]) {
+  return members.length > 1 && members.every(member => notes.some(note => note.scope === member.name))
+}
+
+function visitLink(value: string | undefined, label: string) {
+  const url = value?.trim()
+  if (!url || !/^https?:\/\//i.test(url)) return null
+  const link = document.createElement('a')
+  link.href = url
+  link.target = '_blank'
+  link.rel = 'noreferrer'
+  link.textContent = label
+  return link
+}
+
+function popupSection(className: string, title: string) {
+  const section = document.createElement('section')
+  section.className = className
+  const heading = document.createElement('h3')
+  heading.textContent = title
+  section.append(heading)
+  return section
+}
+
+function appendPublicAccess(root: HTMLElement, access: LimitedPublicAccess, date: string, officialSite: string) {
+  const display = limitedPublicAccessDisplay(access, date)
+  const section = popupSection('popup-schedule popup-public-access', display.label)
+  const box = document.createElement('div')
+  box.className = 'popup-hours-box popup-public-access-date'
+  const timing = document.createElement('strong')
+  timing.textContent = display.timing
+  box.append(timing)
+  if (display.hours) {
+    const hours = document.createElement('span')
+    hours.textContent = display.hours
+    box.append(hours)
+  }
+  section.append(box)
+  root.append(section)
+
+  const guide = popupSection('popup-visit-guide', '見学案内')
+  const list = document.createElement('dl')
+  for (const [label, value] of [['公開対象', access.scope], ['公開条件', access.recurring]] as const) {
+    if (!value) continue
+    const term = document.createElement('dt')
+    term.textContent = label
+    const description = document.createElement('dd')
+    description.textContent = value
+    list.append(term, description)
+  }
+  if (list.childNodes.length) guide.append(list)
+  const link = access.official_url?.trim() === officialSite?.trim()
+    ? null
+    : visitLink(access.official_url, '公式の公開案内')
+  if (link) guide.append(link)
+  root.append(guide)
+}
+
+function appendGroupedFacilities(root: HTMLElement, members: GroupedFacility[], notes: ComponentScheduleNote[]) {
+  if (members.length < 2) return
+  const section = popupSection('popup-grouped-facilities', `含まれる施設（${members.length}施設）`)
+  const list = document.createElement('ul')
+  for (const member of members) {
+    const item = document.createElement('li')
+    const name = document.createElement('strong')
+    name.textContent = member.name
+    item.append(name)
+    for (const text of [member.location, ...notes.filter(note => note.scope === member.name).map(note => note.text)]) {
+      if (!text) continue
+      const line = document.createElement('p')
+      line.textContent = text
+      item.append(line)
+    }
+    const link = visitLink(member.official_url, '公式案内')
+    if (link) {
+      link.setAttribute('aria-label', `${member.name}の公式案内`)
+      item.append(link)
+    }
+    list.append(item)
+  }
+  section.append(list)
+  root.append(section)
+}
+
+function appendOpeningHours(
+  root: HTMLElement,
+  facility: Facility,
+  date: string,
+  weekdayRows: ReturnType<typeof weeklyScheduleRows>,
+  hasSeparateHours: boolean,
+) {
+  const openingPlan = getOpeningPlan(facility)
+  const inactive = facility.operational_status === 'suspended' || facility.operational_status === 'closed'
+  const planLines = [
+    ...(openingPlan ? [openingPlanText(openingPlan)] : []),
+    ...(facility.planned_changes || []).flatMap(plan => plannedChangeDisplay(plan, date).lines),
+  ]
+  const schedule = scheduleDisplay(facility)
+  if (hasSeparateHours && !planLines.length && !schedule.closure) return
+  const section = document.createElement('div')
+  section.className = 'popup-schedule'
+  const hoursBox = document.createElement('div')
+  hoursBox.className = 'popup-hours-box'
+  if (!hasSeparateHours) {
+    if (!inactive && !openingPlan) {
+      const heading = document.createElement('h3')
+      heading.textContent = '本日の開館時間'
+      section.append(heading)
+    }
+    const todayHours = document.createElement('strong')
+    todayHours.className = 'popup-today-hours'
+    if (inactive || openingPlan) todayHours.classList.add('popup-facility-status')
+    else if (schedule.today === '—') todayHours.classList.add('popup-hours-message')
+    todayHours.textContent = inactive ? operationalLabels[facility.operational_status]
+      : openingPlan ? '開館前'
+      : todayHoursText(facility, schedule.today)
+    hoursBox.append(todayHours)
+  }
+  appendPlanLines(hoursBox, planLines)
+  if (weekdayRows.length || (!hasSeparateHours && schedule.summary) || schedule.closure) {
+    const details = document.createElement('details')
+    const heading = document.createElement('summary')
+    heading.textContent = weekdayRows.length ? '曜日ごとの開館時間' : '開館・見学案内'
+    const content = document.createElement('dl')
+    if (weekdayRows.length) content.className = 'popup-weekday-hours'
+    const addRow = (label: string, value: string) => {
+      const term = document.createElement('dt')
+      term.textContent = label
+      const description = document.createElement('dd')
+      description.textContent = value
+      content.append(term, description)
+    }
+    weekdayRows.forEach(row => addRow(row.day, row.text))
+    if (!hasSeparateHours && schedule.summary) addRow('見学案内', schedule.summary)
+    if (schedule.closure && (hasSeparateHours || !schedule.summary.includes(schedule.closure))) {
+      addRow(weekdayRows.length ? '補足' : '休館日', closureDisplay(schedule.closure))
+    }
+    details.append(heading, content)
+    hoursBox.append(details)
+  }
+  section.append(hoursBox)
+  root.append(section)
+}
+
 function buildPopup(facility: Facility, outsideFilters: boolean) {
   const root = document.createElement('div')
   root.className = 'map-popup'
@@ -425,86 +563,17 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
     root.append(museumCategoryRow)
   }
   root.append(title)
-  const schedule = scheduleDisplay(facility)
-  const scheduleElement = document.createElement('div')
-  scheduleElement.className = 'popup-schedule'
-  const hoursHeading = document.createElement('h3')
-  const openingPlan = getOpeningPlan(facility)
-  const inactive = facility.operational_status === 'suspended' || facility.operational_status === 'closed'
-  const access = !inactive && !openingPlan ? facility.limited_public_access : undefined
-  const limitedAccess = access ? limitedPublicAccessDisplay(access, todayInTokyo()) : null
-  hoursHeading.textContent = '本日の開館時間'
-  const hoursBox = document.createElement('div')
-  hoursBox.className = 'popup-hours-box'
-  const todayHours = document.createElement('strong')
-  todayHours.className = 'popup-today-hours'
-  if (inactive || openingPlan) todayHours.classList.add('popup-facility-status')
-  if (limitedAccess) todayHours.classList.add('limited-access-label')
-  todayHours.textContent = facility.operational_status === 'closed' ? '閉館済み'
-    : facility.operational_status === 'suspended' ? '休館中'
-    : openingPlan ? '開館前'
-    : limitedAccess ? limitedAccess.label
-    : todayHoursText(facility, schedule.today)
-  if (schedule.today === '—' && !openingPlan && !inactive && !limitedAccess) todayHours.classList.add('popup-hours-message')
-  hoursBox.append(todayHours)
-  const planLines = [
-    ...(openingPlan ? [openingPlanText(openingPlan)] : []),
-    ...(facility.planned_changes || []).flatMap(plan => plannedChangeDisplay(plan, todayInTokyo()).lines),
-  ]
-  appendPlanLines(hoursBox, limitedAccess ? [limitedAccess.timing, ...planLines] : planLines)
-  if (access) {
-    const details = document.createElement('div')
-    details.className = 'popup-status-reason'
-    for (const value of [access.scope && `公開対象 ${access.scope}`, access.recurring]) {
-      if (!value) continue
-      const row = document.createElement('div')
-      row.textContent = value
-      details.append(row)
-    }
-    const url = access.official_url?.trim()
-    if (url && /^https?:\/\//i.test(url) && url !== facility.official_url?.trim()) {
-      const link = document.createElement('a')
-      link.href = url
-      link.target = '_blank'
-      link.rel = 'noreferrer'
-      link.textContent = '公開案内を見る'
-      details.append(link)
-    }
-    if (details.childNodes.length) hoursBox.append(details)
-  } else if (!inactive && (schedule.details || schedule.regular !== '—' || schedule.closed !== '—')) {
-    const details = document.createElement('details')
-    const summary = document.createElement('summary')
-    summary.textContent = '曜日ごとの開館時間'
-    const content = document.createElement('dl')
-    const addRow = (label: string, value: string) => {
-      if (!value || value === '—') return
-      const key = document.createElement('dt')
-      key.textContent = label
-      const valueElement = document.createElement('dd')
-      valueElement.textContent = value
-      content.append(key, valueElement)
-    }
-    const structured = facility.schedule
-    const weekdayRows = weeklyScheduleRows(structured, facility.schedule_applicability, todayInTokyo())
-    if (weekdayRows.length) {
-      content.className = 'popup-weekday-hours'
-      weekdayRows.forEach(row => addRow(row.day, row.text))
-      const closure = structured?.holiday_rule || schedule.closed
-      // Keep holiday substitutions, seasonal closures and other exceptions visible.
-      if (closure && closure !== '—') addRow('補足', closureDisplay(closure))
-    } else {
-      addRow('通常時間', schedule.regular)
-      if (schedule.closed !== '—') addRow('休館日', closureDisplay(schedule.closed))
-      if (schedule.details !== schedule.regular) addRow('補足', schedule.details)
-    }
-    details.append(summary, content)
-    hoursBox.append(details)
-  }
-  if (!inactive && !openingPlan && !limitedAccess) scheduleElement.append(hoursHeading)
-  scheduleElement.append(hoursBox)
-  root.append(scheduleElement)
-  appendComponentScheduleNotes(root, currentComponentScheduleNotes(facility, todayInTokyo()))
-  appendPlannedChangeNotes(root, facility.planned_changes || [], todayInTokyo())
+  const date = todayInTokyo()
+  const access = activePublicAccess(facility)
+  const members = facility.grouped_facilities || []
+  const weekdayRows = activeWeekdayRows(facility, date)
+  const componentNotes = currentComponentScheduleNotes(facility, date)
+  const hasSeparateHours = !weekdayRows.length && (Boolean(access) || hasMemberSchedules(members, componentNotes))
+  appendOpeningHours(root, facility, date, weekdayRows, hasSeparateHours)
+  if (access) appendPublicAccess(root, access, date, facility.official_url)
+  appendGroupedFacilities(root, members, componentNotes)
+  appendComponentScheduleNotes(root, componentNotes.filter(note => !members.some(member => member.name === note.scope)))
+  appendPlannedChangeNotes(root, facility.planned_changes || [], date)
   const tags = conditionTags(facility)
   if (tags.length) {
     const tagRow = document.createElement('div')
@@ -579,9 +648,8 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   return root
 }
 
-function MapCanvas({ items, prefecture, selectedId, temporaryId, layoutKey, mobile, focusRequest, onSelect, onBounds, onPrefectureFit, onErrorChange }: {
+function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusRequest, onSelect, onBounds, onErrorChange }: {
   items: Facility[]
-  prefecture: string
   selectedId: string | null
   temporaryId: string | null
   focusRequest: SearchFocusRequest | null
@@ -589,7 +657,6 @@ function MapCanvas({ items, prefecture, selectedId, temporaryId, layoutKey, mobi
   mobile: boolean
   onSelect: (facility: Facility | null) => void
   onBounds: (bounds: BoundsValue) => void
-  onPrefectureFit: () => void
   onErrorChange: (error: boolean) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -597,7 +664,6 @@ function MapCanvas({ items, prefecture, selectedId, temporaryId, layoutKey, mobi
   const markersRef = useRef(new Map<string, Marker>())
   const popupRef = useRef<Popup | null>(null)
   const focusedRequest = useRef<SearchFocusRequest | null>(null)
-  const fittedPrefecture = useRef('')
   const retryCamera = useRef<{ center: [number, number]; zoom: number } | null>(null)
   const [retry, setRetry] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -722,18 +788,6 @@ function MapCanvas({ items, prefecture, selectedId, temporaryId, layoutKey, mobi
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || loading || fittedPrefecture.current === prefecture) return
-    fittedPrefecture.current = prefecture
-    if (!prefecture || !items.length) return
-
-    const bounds = items.reduce((value, item) => value.extend([item.longitude, item.latitude]), new LngLatBounds())
-    map.fitBounds(bounds, { padding: { top: reviewMode ? 190 : 125, right: 65, bottom: 95, left: 65 }, maxZoom: 12, duration: 0 })
-    publishBounds()
-    onPrefectureFit()
-  }, [items, loading, onPrefectureFit, prefecture, publishBounds])
-
-  useEffect(() => {
-    const map = mapRef.current
     if (!map || loading) return
     markersRef.current.forEach(marker => marker.remove())
     markersRef.current.clear()
@@ -746,10 +800,22 @@ function MapCanvas({ items, prefecture, selectedId, temporaryId, layoutKey, mobi
       if (reviewNumber) pin.dataset.reviewNumber = String(reviewNumber)
       pin.className = `museum-pin category-${getCategoryGroup(facility)}`
       pin.style.setProperty('--pin', categoryColors[getCategoryGroup(facility)])
-      pin.setAttribute('aria-label', [facilityLabel(facility), getOpeningPlan(facility)?.kind === 'opening' ? '開館予定' : operationalLabels[facility.operational_status]].filter(Boolean).join('、'))
+      const groupCount = facility.grouped_facilities?.length || 0
+      pin.setAttribute('aria-label', [
+        facilityLabel(facility),
+        groupCount > 1 ? `${groupCount}施設` : '',
+        getOpeningPlan(facility)?.kind === 'opening' ? '開館予定' : operationalLabels[facility.operational_status],
+      ].filter(Boolean).join('、'))
       const symbol = document.createElement('span')
       symbol.textContent = categorySymbols[getCategoryGroup(facility)]
       pin.append(symbol)
+      if (groupCount > 1) {
+        const count = document.createElement('small')
+        count.className = 'pin-group-count'
+        count.textContent = String(groupCount)
+        count.setAttribute('aria-hidden', 'true')
+        pin.append(count)
+      }
       element.append(pin)
       const marker = new Marker({
         element,
@@ -938,15 +1004,6 @@ function FilterPanel({ draft, onChange, onClose, onApply }: {
     <aside className="filter-panel" aria-label="施設フィルター">
       <header><div><small>表示条件を編集</small><h2>フィルター</h2></div><Button onClick={onClose} aria-label="閉じる"><Icon name="close" /></Button></header>
       <div className="filter-scroll">
-        {availablePrefectureRegions.length > 0 && <section>
-          <h3><label htmlFor="prefecture-filter">都道府県</label></h3>
-          <select id="prefecture-filter" className="prefecture-select" value={draft.prefecture} onChange={event => onChange({ ...draft, prefecture: event.target.value })}>
-            <option value="">すべての都道府県</option>
-            {availablePrefectureRegions.map(region => <optgroup key={region.name} label={region.name}>
-              {region.prefectures.map(prefecture => <option key={prefecture} value={prefecture}>{prefecture}</option>)}
-            </optgroup>)}
-          </select>
-        </section>}
         <section><h3>施設の状態 <small>複数選択</small></h3><CheckboxGroup values={['active', 'suspended', 'closed']} selected={draft.operational} labels={operationalLabels} onChange={operational => onChange({ ...draft, operational })} /><label className="opening-plan-toggle"><input type="checkbox" checked={draft.includeOpeningPlans} onChange={event => onChange({ ...draft, includeOpeningPlans: event.target.checked })} />開館・再開予定も表示</label><p className="filter-help">予定が公表されている館も表示します。通常の休館日・営業時間外とは別の条件です。</p></section>
         <section><h3>掲載状態 <small>複数選択</small></h3><CheckboxGroup values={['normal', 'hold', 'out_of_scope']} selected={draft.publication} labels={publicationLabels} onChange={publication => onChange({ ...draft, publication })} /><p className="filter-help">開発中の確認用に、掲載対象外の施設も表示できます。施設の状態とは別の条件です。</p></section>
         <section><h3>カテゴリ <small>複数選択</small></h3><CheckboxGroup values={categoryGroups} selected={draft.categories} labels={categoryLabels} onChange={categories => onChange({ ...draft, categories })} /><label className="filter-subcategory-option"><input type="checkbox" checked={draft.includeSubcategories} onChange={event => onChange({ ...draft, includeSubcategories: event.target.checked })} /><span aria-hidden="true">{draft.includeSubcategories ? '✓' : ''}</span><span><b>サブカテゴリも含める</b><small>オフにすると主カテゴリだけで絞り込みます</small></span></label></section>
@@ -976,8 +1033,14 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
     || (left.start_date || '').localeCompare(right.start_date || ''))
   const openingPlan = getOpeningPlan(facility)
   const inactive = facility.operational_status === 'suspended' || facility.operational_status === 'closed'
-  const access = !inactive && !openingPlan ? facility.limited_public_access : undefined
-  const limitedAccess = access ? limitedPublicAccessDisplay(access, todayInTokyo()) : null
+  const date = todayInTokyo()
+  const access = activePublicAccess(facility)
+  const limitedAccess = access ? limitedPublicAccessDisplay(access, date) : null
+  const members = facility.grouped_facilities || []
+  const groupCount = members.length
+  const separateHours = Boolean(limitedAccess) || (groupCount > 1
+    && hasMemberSchedules(members, currentComponentScheduleNotes(facility, date)))
+  const showHours = !separateHours || activeWeekdayRows(facility, date).length > 0
   const planDisplays = (facility.planned_changes || []).map(plan => plannedChangeDisplay(plan, todayInTokyo()))
   const planLines = [...(openingPlan ? [openingPlanText(openingPlan)] : []), ...planDisplays.flatMap(plan => plan.lines)]
   const schedule = scheduleDisplay(facility)
@@ -994,13 +1057,17 @@ function FacilityCard({ facility, selected, exhibitionFilter, onSelect }: {
         <div className="list-museum-categories">{displayMuseumCategories(facility).map(category => <span key={category}>{category}</span>)}</div>
       </div>
       {facility.address && <div className="list-card-address">{facility.address}</div>}
-      <div className={`list-schedule ${planLines.length || limitedAccess ? 'list-with-plans' : ''} ${inactive || openingPlan ? 'list-inactive' : ''}`}>
+      {groupCount > 1 && <div className="list-group-count">{groupCount}施設</div>}
+      {(inactive || openingPlan || showHours || planLines.length > 0) && <div className={`list-schedule ${planLines.length ? 'list-with-plans' : ''} ${inactive || openingPlan ? 'list-inactive' : ''}`}>
         {inactive ? <p>{operationalLabels[facility.operational_status]}</p>
           : openingPlan ? <p>開館前</p>
-          : limitedAccess ? <><span className="limited-access-label">{limitedAccess.label}</span><span className="list-status-detail">{limitedAccess.timing}</span></>
-          : <div><span>本日</span><p>{todayHoursText(facility, schedule.today)}</p></div>}
+          : showHours && <div><span>本日</span><p>{todayHoursText(facility, schedule.today)}</p></div>}
         {planLines.map((line, index) => <span className="list-status-detail" key={index}>｜{line}</span>)}
-      </div>
+      </div>}
+      {limitedAccess && <div className="list-public-access">
+        <strong>{limitedAccess.timing}</strong>
+        {limitedAccess.hours && <span>{limitedAccess.hours}</span>}
+      </div>}
       {planDisplays.filter(plan => plan.statusNote).map((plan, index) => <div className="list-notice" key={index}>{plan.statusNote}</div>)}
       {notice && <div className={`list-notice ${facility.operational_status}`}>{notice}</div>}
       {exhibitions.slice(0, 2).map(item => <div className={`card-exhibition ${exhibitionPhase(item) === '開催予定' ? 'exhibition-upcoming' : 'exhibition-ongoing'} ${exhibitionFilter !== 'any' ? 'featured' : ''}`} key={item.title}><em>{exhibitionPhase(item) || '特別展'}{item.is_sample && <small>サンプル</small>}</em><b>{item.title}</b><span>会期：{formatExhibitionPeriod(item)}</span></div>)}
@@ -1121,7 +1188,6 @@ function App() {
     liveBoundsRef.current = bounds
     setLiveBounds(bounds)
   }, [])
-  const refreshListBounds = useCallback(() => setListBounds(liveBoundsRef.current), [])
   const handleSelect = useCallback((facility: Facility | null) => {
     setSelectionOrigin('map')
     setSelectedId(facility?.id || null)
@@ -1178,7 +1244,6 @@ function App() {
     if (mobile) setSelectedId(null)
   }
   const applyFilters = () => {
-    if (draft.prefecture !== filters.prefecture) setSelectedId(null)
     setFilters(cloneFilters(draft))
     setTemporaryId(null)
     setFilterOpen(false)
@@ -1190,7 +1255,6 @@ function App() {
 
   const activeChips = useMemo(() => {
     const chips: { key: string; label: string; remove: () => void }[] = []
-    if (filters.prefecture) chips.push({ key: 'prefecture', label: filters.prefecture, remove: () => setFilters(current => ({ ...current, prefecture: '' })) })
     if (!sameValues(filters.operational, INITIAL_FILTERS.operational)) chips.push({
       key: 'operational',
       label: `施設の状態: ${filters.operational.map(value => operationalLabels[value]).join('・') || 'すべて'}`,
@@ -1236,7 +1300,7 @@ function App() {
       {activeChips.length > 0 && <div className="active-chips">{activeChips.map(chip => <Button key={chip.key} onClick={chip.remove}>{chip.label}<Icon name="close" size={12} /></Button>)}</div>}
 
       <section className="map-area">
-        <MapCanvas items={visible} prefecture={filters.prefecture} selectedId={filterOpen ? null : selectedId} temporaryId={temporaryId} layoutKey={layoutKey} mobile={mobile} focusRequest={focusRequest} onSelect={handleSelect} onBounds={handleBounds} onPrefectureFit={refreshListBounds} onErrorChange={handleMapError} />
+        <MapCanvas items={visible} selectedId={filterOpen ? null : selectedId} temporaryId={temporaryId} layoutKey={layoutKey} mobile={mobile} focusRequest={focusRequest} onSelect={handleSelect} onBounds={handleBounds} onErrorChange={handleMapError} />
         {!mapError && <svg className="map-center-target" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
           <path d="M12 4v16M4 12h16" stroke="white" strokeWidth="4" strokeLinecap="round" />
           <path d="M12 4v16M4 12h16" stroke="#687671" strokeWidth="1.5" strokeLinecap="round" />
