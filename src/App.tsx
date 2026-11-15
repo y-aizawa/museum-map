@@ -448,7 +448,12 @@ function appendPublicAccess(root: HTMLElement, access: LimitedPublicAccess, date
 
 function appendGroupedFacilities(root: HTMLElement, members: GroupedFacility[], notes: ComponentScheduleNote[]) {
   if (members.length < 2) return
-  const section = popupSection('popup-grouped-facilities', `含まれる施設（${members.length}施設）`)
+  if (!members.some(member => member.location || member.official_url || notes.some(note => note.scope === member.name))) return
+  const section = document.createElement('details')
+  section.className = 'popup-grouped-facilities'
+  const summary = document.createElement('summary')
+  summary.textContent = '施設別の案内'
+  section.append(summary)
   const list = document.createElement('ul')
   for (const member of members) {
     const item = document.createElement('li')

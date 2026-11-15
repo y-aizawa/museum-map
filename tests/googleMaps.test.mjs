@@ -80,10 +80,15 @@ test('known wrong destinations never fall back, regardless of operating status',
       assert.equal(action.tagName, 'a')
       assert.equal(action.target, '_blank')
       assert.equal(action.rel, 'noreferrer')
-      assert.equal(createGoogleMapsAction({ ...item, google_maps: { verification: 'verified', url, destination_scope: 'building' } }).textContent, 'Googleマップ（建物）')
-      assert.equal(createGoogleMapsAction({ ...item, google_maps: { verification: 'verified', url, destination_scope: 'location' } }).textContent, 'Googleマップ（所在地）')
-      assert.equal(createGoogleMapsAction({ ...item, google_maps: { verification: 'verified', url, destination_scope: 'historical_location' } }).textContent, 'Googleマップ（旧所在地）')
-      assert.equal(createGoogleMapsAction({ ...item, google_maps: undefined }).href, original)
+      assert.equal(action.textContent, 'Googleマップで開く')
+      for (const destination_scope of ['building', 'location', 'historical_location']) {
+        const scopedAction = createGoogleMapsAction({ ...item, google_maps: { verification: 'verified', url, destination_scope } })
+        assert.equal(scopedAction.textContent, 'Googleマップで開く')
+        assert.equal(scopedAction.href, url)
+      }
+      const fallback = createGoogleMapsAction({ ...item, google_maps: undefined })
+      assert.equal(fallback.textContent, 'Googleマップで開く')
+      assert.equal(fallback.href, original)
     }
     assert.equal(googleMapsUrl(reviewed({ verification: 'blocked', url, place_id: 'stale' })), null)
   } finally { globalThis.document = originalDocument }

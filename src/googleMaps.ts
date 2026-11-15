@@ -52,10 +52,7 @@ export function createGoogleMapsAction(facility: MapFacility): HTMLAnchorElement
     link.href = url
     link.target = '_blank'
     link.rel = 'noreferrer'
-    link.textContent = facility.google_maps?.destination_scope === 'historical_location' ? 'Googleマップ（旧所在地）'
-      : facility.google_maps?.destination_scope === 'location' ? 'Googleマップ（所在地）'
-      : facility.google_maps?.destination_scope === 'building' ? 'Googleマップ（建物）'
-      : 'Googleマップで開く'
+    link.textContent = 'Googleマップで開く'
     return link
   }
   const button = document.createElement('button')
