@@ -303,11 +303,10 @@ button, input { font: inherit; }
 .popup-visit-guide dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 5px 10px; margin: 0; font-size: 12px; line-height: 1.65; }
 .popup-visit-guide dt { color: var(--muted); }
 .popup-visit-guide dd { margin: 0; }
-.popup-visit-guide a, .popup-grouped-facilities a { display: inline-block; margin-top: 5px; color: var(--brand-dark); font-size: 12px; text-decoration: underline; text-underline-offset: 2px; }
-.popup-grouped-facilities { margin: 10px 0 0; padding: 0; list-style: none; }
-.popup-grouped-facilities li + li { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line); }
-.popup-grouped-facilities li strong { font-size: 13px; }
-.popup-grouped-facilities p { margin: 3px 0 0; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.popup-visit-guide a { display: inline-block; margin-top: 5px; color: var(--brand-dark); font-size: 12px; text-decoration: underline; text-underline-offset: 2px; }
+.popup-group-visit-notes { margin: 10px 0 0; display: grid; gap: 3px 8px; font-size: 12px; line-height: 1.6; }
+.popup-group-visit-notes dt { font-weight: 600; }
+.popup-group-visit-notes dd { margin: 0 0 4px; color: var(--muted); }
 .popup-group-hours p { margin: 4px 0 0; font-size: 13px; line-height: 1.6; }
 .list-group-count { margin-top: 5px; color: var(--brand-dark); font-size: 11px; font-weight: 600; }
 .list-public-access { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; margin-top: 6px; font-size: 13px; line-height: 1.55; }

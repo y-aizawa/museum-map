@@ -36,6 +36,7 @@ type Exhibition = {
   end_date?: string
   status?: 'ongoing' | 'upcoming'
   official_url?: string
+  member_venues?: string[]
   is_sample?: boolean
 }
 
@@ -447,29 +448,20 @@ function appendPublicAccess(root: HTMLElement, access: LimitedPublicAccess, date
   root.append(guide)
 }
 
-function appendGroupedFacilities(root: HTMLElement, members: GroupedFacility[], notes: ComponentScheduleNote[], sharedUrl?: string) {
-  const list = document.createElement('ul')
-  list.className = 'popup-grouped-facilities'
-  list.setAttribute('aria-label', '施設別の案内')
+function appendGroupedVisitNotes(root: HTMLElement, members: GroupedFacility[], notes: ComponentScheduleNote[]) {
+  if (!notes.some(note => members.some(member => member.name === note.scope))) return
+  const guide = document.createElement('dl')
+  guide.className = 'popup-group-visit-notes'
   for (const member of members) {
-    const item = document.createElement('li')
-    const name = document.createElement('strong')
+    const lines = notes.filter(note => note.scope === member.name).map(note => note.text)
+    if (!lines.length) continue
+    const name = document.createElement('dt')
     name.textContent = member.name
-    item.append(name)
-    for (const text of [member.location, ...notes.filter(note => note.scope === member.name).map(note => note.text)]) {
-      if (!text) continue
-      const line = document.createElement('p')
-      line.textContent = text
-      item.append(line)
-    }
-    const link = member.official_url !== sharedUrl ? visitLink(member.official_url, '公式案内') : null
-    if (link) {
-      link.setAttribute('aria-label', `${member.name}の公式案内`)
-      item.append(link)
-    }
-    list.append(item)
+    const info = document.createElement('dd')
+    info.textContent = [...lines, member.location].filter(Boolean).join(' ')
+    guide.append(name, info)
   }
-  root.append(list)
+  root.append(guide)
 }
 
 function appendOpeningHours(
@@ -478,7 +470,6 @@ function appendOpeningHours(
   date: string,
   weekdayRows: ReturnType<typeof weeklyScheduleRows>,
   hasSeparateHours: boolean,
-  shared = false,
 ) {
   const openingPlan = getOpeningPlan(facility)
   const inactive = facility.operational_status === 'suspended' || facility.operational_status === 'closed'
@@ -495,7 +486,7 @@ function appendOpeningHours(
   if (!hasSeparateHours) {
     if (!inactive && !openingPlan) {
       const heading = document.createElement('h3')
-      heading.textContent = shared ? '共通の開館時間（本日）' : '本日の開館時間'
+      heading.textContent = '本日の開館時間'
       section.append(heading)
     }
     const todayHours = document.createElement('strong')
@@ -571,13 +562,12 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   const weekdayRows = activeWeekdayRows(facility, date)
   const componentNotes = currentComponentScheduleNotes(facility, date)
   if (grouped) {
-    appendGroupedFacilities(root, members, componentNotes, facility.group_visit?.official_url)
     if (facility.operational_status === 'active' && !getOpeningPlan(facility)) {
       const sharedHours = facility.group_visit?.shared_hours
-      if (facility.group_visit?.shared_weekly_schedule && weekdayRows.length && !hasMemberSchedules(members, componentNotes)) {
-        appendOpeningHours(root, facility, date, weekdayRows, false, true)
-      } else if (sharedHours && !hasMemberSchedules(members, componentNotes)) {
-        const section = popupSection('popup-schedule popup-group-hours', '共通の開館・見学案内')
+      if (facility.group_visit?.shared_weekly_schedule && weekdayRows.length) {
+        appendOpeningHours(root, facility, date, weekdayRows, false)
+      } else if (sharedHours) {
+        const section = popupSection('popup-schedule popup-group-hours', '開館・見学案内')
         const hours = document.createElement('p')
         hours.textContent = sharedHours
         section.append(hours)
@@ -586,6 +576,7 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
     } else {
       appendOpeningHours(root, facility, date, [], false)
     }
+    appendGroupedVisitNotes(root, members, componentNotes)
   } else {
     appendOpeningHours(root, facility, date, weekdayRows, !weekdayRows.length && Boolean(access))
   }
@@ -645,6 +636,13 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
       const dates = document.createElement('span')
       dates.textContent = `会期：${formatExhibitionPeriod(exhibition)}`
       item.append(state, name)
+      if (grouped) {
+        const venue = document.createElement('span')
+        venue.textContent = exhibition.member_venues?.length
+          ? `会場　${exhibition.member_venues.join('／')}`
+          : '会場は展覧会の公式案内でご確認ください'
+        item.append(venue)
+      }
       item.append(dates)
       if (exhibition.official_url) {
         const exhibitionLink = document.createElement('a')
@@ -661,9 +659,15 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   const links = document.createElement('div')
   links.className = 'popup-links'
   const official = grouped
-    ? visitLink(facility.group_visit?.official_url, '共通の公式案内')
+    ? visitLink(facility.group_visit?.official_url, '公式案内')
     : createOfficialSiteAction(facility)
   if (official) links.append(official)
+  if (grouped && !official) {
+    for (const member of members) {
+      const link = visitLink(member.official_url, member.name)
+      if (link) links.append(link)
+    }
+  }
   links.append(createGoogleMapsAction(facility))
   root.append(links)
   return root
