@@ -448,25 +448,30 @@ function appendPublicAccess(root: HTMLElement, access: LimitedPublicAccess, date
   root.append(guide)
 }
 
-function appendGroupedVisitNotes(root: HTMLElement, members: GroupedFacility[], notes: ComponentScheduleNote[]) {
-  if (!notes.some(note => members.some(member => member.name === note.scope))) return
-  const section = popupSection('popup-schedule', '開館・見学案内')
-  const hoursBox = document.createElement('div')
-  hoursBox.className = 'popup-hours-box'
+function appendGroupedVisitNotes(hoursBox: HTMLElement, members: GroupedFacility[], notes: ComponentScheduleNote[]) {
+  const details = document.createElement('details')
+  const summary = document.createElement('summary')
+  summary.textContent = '施設別の案内'
   const guide = document.createElement('dl')
   guide.className = 'popup-group-visit-notes'
   for (const member of members) {
     const lines = notes.filter(note => note.scope === member.name).map(note => note.text)
-    if (!lines.length) continue
+    const link = visitLink(member.official_url, '公式案内')
+    if (!lines.length && !member.location && !link) continue
     const name = document.createElement('dt')
     name.textContent = member.name
     const info = document.createElement('dd')
     info.textContent = [...lines, member.location].filter(Boolean).join(' ')
+    if (link) {
+      link.setAttribute('aria-label', `${member.name}の公式案内`)
+      info.append(link)
+    }
     guide.append(name, info)
   }
-  hoursBox.append(guide)
-  section.append(hoursBox)
-  root.append(section)
+  if (guide.childNodes.length) {
+    details.append(summary, guide)
+    hoursBox.append(details)
+  }
 }
 
 function appendOpeningHours(
@@ -475,6 +480,7 @@ function appendOpeningHours(
   date: string,
   weekdayRows: ReturnType<typeof weeklyScheduleRows>,
   hasSeparateHours: boolean,
+  groupHours?: string,
 ) {
   const openingPlan = getOpeningPlan(facility)
   const inactive = facility.operational_status === 'suspended' || facility.operational_status === 'closed'
@@ -491,20 +497,21 @@ function appendOpeningHours(
   if (!hasSeparateHours) {
     if (!inactive && !openingPlan) {
       const heading = document.createElement('h3')
-      heading.textContent = '本日の開館時間'
+      heading.textContent = groupHours === undefined ? '本日の開館時間' : '開館時間'
       section.append(heading)
     }
     const todayHours = document.createElement('strong')
     todayHours.className = 'popup-today-hours'
     if (inactive || openingPlan) todayHours.classList.add('popup-facility-status')
-    else if (schedule.today === '—') todayHours.classList.add('popup-hours-message')
+    else if (groupHours === '' || (groupHours === undefined && schedule.today === '—')) todayHours.classList.add('popup-hours-message')
     todayHours.textContent = inactive ? operationalLabels[facility.operational_status]
       : openingPlan ? '開館前'
+      : groupHours !== undefined ? groupHours || '施設別の案内をご確認ください'
       : todayHoursText(facility, schedule.today)
     hoursBox.append(todayHours)
   }
   appendPlanLines(hoursBox, planLines)
-  if (weekdayRows.length || (!hasSeparateHours && schedule.summary) || schedule.closure) {
+  if (groupHours === undefined && (weekdayRows.length || (!hasSeparateHours && schedule.summary) || schedule.closure)) {
     const details = document.createElement('details')
     const heading = document.createElement('summary')
     heading.textContent = weekdayRows.length ? '曜日ごとの開館時間' : '開館・見学案内'
@@ -527,6 +534,7 @@ function appendOpeningHours(
   }
   section.append(hoursBox)
   root.append(section)
+  return hoursBox
 }
 
 function buildPopup(facility: Facility, outsideFilters: boolean) {
@@ -567,24 +575,10 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   const weekdayRows = activeWeekdayRows(facility, date)
   const componentNotes = currentComponentScheduleNotes(facility, date)
   if (grouped) {
-    appendGroupedVisitNotes(root, members, componentNotes)
-    if (facility.operational_status === 'active' && !getOpeningPlan(facility)) {
-      const sharedHours = facility.group_visit?.shared_hours
-      if (facility.group_visit?.shared_weekly_schedule && weekdayRows.length && !hasMemberSchedules(members, componentNotes)) {
-        appendOpeningHours(root, facility, date, weekdayRows, false)
-      } else if (sharedHours && !hasMemberSchedules(members, componentNotes)) {
-        const section = popupSection('popup-schedule popup-group-hours', '開館・見学案内')
-        const hoursBox = document.createElement('div')
-        hoursBox.className = 'popup-hours-box'
-        const hours = document.createElement('p')
-        hours.textContent = sharedHours
-        hoursBox.append(hours)
-        section.append(hoursBox)
-        root.append(section)
-      }
-    } else {
-      appendOpeningHours(root, facility, date, [], false)
-    }
+    const sharedWeek = Boolean(facility.group_visit?.shared_weekly_schedule && weekdayRows.length)
+    const hoursBox = appendOpeningHours(root, facility, date, sharedWeek ? weekdayRows : [], false,
+      sharedWeek ? undefined : facility.group_visit?.shared_hours ?? '')
+    if (hoursBox) appendGroupedVisitNotes(hoursBox, members, componentNotes)
   } else {
     appendOpeningHours(root, facility, date, weekdayRows, !weekdayRows.length && Boolean(access))
   }
