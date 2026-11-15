@@ -450,6 +450,9 @@ function appendPublicAccess(root: HTMLElement, access: LimitedPublicAccess, date
 
 function appendGroupedVisitNotes(root: HTMLElement, members: GroupedFacility[], notes: ComponentScheduleNote[]) {
   if (!notes.some(note => members.some(member => member.name === note.scope))) return
+  const section = popupSection('popup-schedule', '開館・見学案内')
+  const hoursBox = document.createElement('div')
+  hoursBox.className = 'popup-hours-box'
   const guide = document.createElement('dl')
   guide.className = 'popup-group-visit-notes'
   for (const member of members) {
@@ -461,7 +464,9 @@ function appendGroupedVisitNotes(root: HTMLElement, members: GroupedFacility[], 
     info.textContent = [...lines, member.location].filter(Boolean).join(' ')
     guide.append(name, info)
   }
-  root.append(guide)
+  hoursBox.append(guide)
+  section.append(hoursBox)
+  root.append(section)
 }
 
 function appendOpeningHours(
@@ -562,21 +567,24 @@ function buildPopup(facility: Facility, outsideFilters: boolean) {
   const weekdayRows = activeWeekdayRows(facility, date)
   const componentNotes = currentComponentScheduleNotes(facility, date)
   if (grouped) {
+    appendGroupedVisitNotes(root, members, componentNotes)
     if (facility.operational_status === 'active' && !getOpeningPlan(facility)) {
       const sharedHours = facility.group_visit?.shared_hours
-      if (facility.group_visit?.shared_weekly_schedule && weekdayRows.length) {
+      if (facility.group_visit?.shared_weekly_schedule && weekdayRows.length && !hasMemberSchedules(members, componentNotes)) {
         appendOpeningHours(root, facility, date, weekdayRows, false)
-      } else if (sharedHours) {
+      } else if (sharedHours && !hasMemberSchedules(members, componentNotes)) {
         const section = popupSection('popup-schedule popup-group-hours', '開館・見学案内')
+        const hoursBox = document.createElement('div')
+        hoursBox.className = 'popup-hours-box'
         const hours = document.createElement('p')
         hours.textContent = sharedHours
-        section.append(hours)
+        hoursBox.append(hours)
+        section.append(hoursBox)
         root.append(section)
       }
     } else {
       appendOpeningHours(root, facility, date, [], false)
     }
-    appendGroupedVisitNotes(root, members, componentNotes)
   } else {
     appendOpeningHours(root, facility, date, weekdayRows, !weekdayRows.length && Boolean(access))
   }
