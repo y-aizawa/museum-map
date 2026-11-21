@@ -907,8 +907,6 @@ function MapCanvas({ items, selectedId, temporaryId, layoutKey, mobile, focusReq
       element.className = 'museum-marker-anchor'
       const pin = document.createElement('button')
       pin.type = 'button'
-      const reviewNumber = reviewNumbers.get(facility.id)
-      if (reviewNumber) pin.dataset.reviewNumber = String(reviewNumber)
       pin.className = `museum-pin category-${getCategoryGroup(facility)}`
       pin.style.setProperty('--pin', categoryColors[getCategoryGroup(facility)])
       pin.setAttribute('aria-label', [
