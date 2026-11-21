@@ -118,7 +118,9 @@ const reviewMode = reviewId !== null
 const review = reviewScope(dataset.facilities as Facility[], reviewId, reviewBatches)
 const normalMapUrl = new URL(window.location.href)
 normalMapUrl.searchParams.delete('review')
-const reviewNumbers = new Map(review.batch?.facility_ids.map((id, index) => [id, index + 1]))
+// Temporary Tokyo review snapshot: keep each number tied to its facility ID while corrections are made.
+const tokyoReviewBatch = reviewBatches.find(batch => batch.id === 'tokyo-all-2026-11-21')
+const reviewNumbers = new Map((review.batch ?? tokyoReviewBatch)?.facility_ids.map((id, index) => [id, index + 1]))
 function facilityLabel(facility: Facility) {
   const number = reviewNumbers.get(facility.id)
   return number ? `${number}. ${facility.name}` : facility.name
@@ -1278,7 +1280,9 @@ function App() {
   const suggestions = useMemo(() => {
     const text = query.trim().toLowerCase()
     if (!text) return []
-    return facilities.filter(item => [item.name, item.short_name, ...item.aliases].some(value => value.toLowerCase().includes(text))).slice(0, 8)
+    return facilities.filter(item => /^\d+$/.test(text)
+      ? reviewNumbers.get(item.id) === Number(text)
+      : [facilityLabel(item), item.short_name, ...item.aliases].some(value => value.toLowerCase().includes(text))).slice(0, 8)
   }, [query])
   const boundsStale = useMemo(() => {
     if (!liveBounds || !listBounds) return false
@@ -1333,7 +1337,7 @@ function App() {
   const selectSearch = (facility: Facility) => {
     setFocusRequest(previous => ({ facilityId: facility.id, sequence: (previous?.sequence || 0) + 1 }))
     setSelectionOrigin('search')
-    setQuery(facility.name)
+    setQuery(facilityLabel(facility))
     setSuggestionsOpen(false)
     setTemporaryId(matchesFilters(facility, filters) ? null : facility.id)
     setSelectedId(facility.id)
@@ -1390,7 +1394,7 @@ function App() {
         <div className="top-actions">
           <div className="facility-search">
             <Icon name="search" size={18} />
-            <input value={query} onFocus={() => setSuggestionsOpen(true)} onChange={event => { setQuery(event.target.value); setSuggestionsOpen(true); if (!event.target.value) setTemporaryId(null) }} placeholder="施設名を検索" aria-label="施設名を検索" />
+            <input value={query} onFocus={() => setSuggestionsOpen(true)} onChange={event => { setQuery(event.target.value); setSuggestionsOpen(true); if (!event.target.value) setTemporaryId(null) }} placeholder="施設名・番号を検索" aria-label="施設名・番号を検索" />
             {query && <Button onClick={() => { setQuery(''); setSuggestionsOpen(false); setTemporaryId(null) }} aria-label="検索を消去"><Icon name="close" size={15} /></Button>}
             {suggestionsOpen && query && <div className="search-suggestions">{suggestions.length ? suggestions.map(item => <Button key={item.id} onClick={() => selectSearch(item)}><span className={`category-symbol category-${getCategoryGroup(item)}`} style={categoryStyle(getCategoryGroup(item))}>{categorySymbols[getCategoryGroup(item)]}</span><div><strong>{facilityLabel(item)}</strong></div></Button>) : <p>一致する施設がありません</p>}</div>}
           </div>
